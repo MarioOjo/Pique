@@ -1,7 +1,7 @@
 import type { Card } from '@/types';
 
-// Stand-in for Claude-generated cards until the generateCards Cloud Function
-// is deployed.
+// Fallback only: useCards serves these when Claude card generation fails
+// (function unavailable, daily limit reached, no interests yet).
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

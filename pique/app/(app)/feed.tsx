@@ -59,6 +59,7 @@ export default function FeedScreen() {
     skipCard,
     isLoading,
     error,
+    usingFallbackCards,
   } = useCards();
   const streak = useStreak(user?.uid);
   const [translateX] = useState(() => new Animated.Value(ENTRANCE_OFFSET));
@@ -98,6 +99,7 @@ export default function FeedScreen() {
       return (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.violet} />
+          <Text style={styles.message}>Frank is writing your cards…</Text>
         </View>
       );
     }
@@ -140,6 +142,7 @@ export default function FeedScreen() {
           </View>
           <Text style={styles.progressText}>
             Card {currentIndex + 1} of {totalCards}
+            {usingFallbackCards ? ' · sample cards' : ''}
           </Text>
         </View>
 

@@ -23,7 +23,9 @@ import {
 import {computeStreaks, localDayNumber} from "./stats/streaks";
 import {
   CardGenerationRequest,
+  GenerateCardsResult,
   ScoreResponseRequest,
+  StoredCard,
   ScoreResponseResult,
   UpdateStatsRequest,
   UpdateStatsResult,
@@ -123,7 +125,7 @@ async function releaseDailyQuota(
 
 export const generateCards = onCall(
   {secrets: [anthropicApiKey], timeoutSeconds: 120},
-  async (request) => {
+  async (request): Promise<GenerateCardsResult> => {
     // Auth check — must be signed in
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "Must be signed in");
@@ -183,17 +185,27 @@ export const generateCards = onCall(
 
     // Save cards to Firestore
     const batch = db.batch();
-    const expiresAt = new Date();
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt);
     expiresAt.setDate(expiresAt.getDate() + config.cards.expiryDays);
 
-    generatedCards.forEach((card) => {
-      batch.set(db.collection("cards").doc(), {
+    const cards: StoredCard[] = generatedCards.map((card) => {
+      const ref = db.collection("cards").doc();
+      batch.set(ref, {
         ...card,
         interestId,
         status: "active",
         createdAt: FieldValue.serverTimestamp(),
         expiresAt: Timestamp.fromDate(expiresAt),
       });
+      return {
+        ...card,
+        id: ref.id,
+        interestId,
+        status: "active",
+        createdAt: createdAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+      };
     });
     try {
       await batch.commit();
@@ -212,8 +224,9 @@ export const generateCards = onCall(
 
     return {
       success: true,
-      cardsGenerated: generatedCards.length,
-      message: `Generated ${generatedCards.length} cards for ${interestId}`,
+      cardsGenerated: cards.length,
+      message: `Generated ${cards.length} cards for ${interestId}`,
+      cards,
     };
   },
 );

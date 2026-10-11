@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore';
+
 export type CardType = 'perspective' | 'recall';
 
 export type CardStatus = 'active' | 'flagged' | 'archived';
@@ -13,8 +15,9 @@ export interface Card {
   imageCredit?: string;
   difficulty: number;
   status: CardStatus;
-  createdAt: Date;
-  expiresAt: Date;
+  // Date in app code; Timestamp when read straight from Firestore.
+  createdAt: Date | Timestamp;
+  expiresAt: Date | Timestamp;
 }
 
 export interface Interest {

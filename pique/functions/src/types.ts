@@ -20,6 +20,23 @@ export interface CardGenerationRequest {
   count: number;
 }
 
+// A saved card as returned to the app. Dates are ISO strings because
+// callable responses are plain JSON.
+export interface StoredCard extends GeneratedCard {
+  id: string;
+  interestId: string;
+  status: "active";
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface GenerateCardsResult {
+  success: boolean;
+  cardsGenerated: number;
+  message: string;
+  cards: StoredCard[];
+}
+
 export interface ScoreResponseRequest {
   // An interactions/{id} doc the signed-in user wrote.
   interactionId: string;

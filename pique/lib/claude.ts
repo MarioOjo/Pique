@@ -5,6 +5,7 @@
 import { httpsCallable } from 'firebase/functions';
 // Shared instance, so the emulator connection in lib/firebase.ts applies.
 import { functions } from './firebase';
+import type { Card, CardType } from '@/types';
 
 // Mirrors CardGenerationRequest and the return value of generateCards in
 // functions/src.
@@ -14,14 +15,41 @@ interface GenerateCardsRequest {
   count: number;
 }
 
+// A saved card as the function returns it; dates are ISO strings because
+// callable responses are plain JSON. Mirrors StoredCard in functions/src.
+interface StoredCard {
+  id: string;
+  interestId: string;
+  type: CardType;
+  body: string;
+  prompt: string;
+  counterpoint?: string;
+  difficulty: number;
+  status: 'active';
+  createdAt: string;
+  expiresAt: string;
+}
+
 export interface GenerateCardsResponse {
   success: boolean;
   cardsGenerated: number;
   message: string;
+  cards: Card[];
+}
+
+function toCard(stored: StoredCard): Card {
+  return {
+    ...stored,
+    createdAt: new Date(stored.createdAt),
+    expiresAt: new Date(stored.expiresAt),
+  };
 }
 
 // Callable wrapper for the generateCards Cloud Function
-export const generateCardsCallable = httpsCallable<GenerateCardsRequest, GenerateCardsResponse>(
+export const generateCardsCallable = httpsCallable<
+  GenerateCardsRequest,
+  Omit<GenerateCardsResponse, 'cards'> & { cards: StoredCard[] }
+>(
   functions,
   'generateCards',
 );
@@ -33,8 +61,8 @@ export async function generateCards(
   interestId: string,
   count: number,
 ): Promise<GenerateCardsResponse> {
-  const result = await generateCardsCallable({ userId, interestId, count });
-  return result.data;
+  const { data } = await generateCardsCallable({ userId, interestId, count });
+  return { ...data, cards: data.cards.map(toCard) };
 }
 
 // Mirrors ScoreResponseRequest / ScoreResponseResult in functions/src.

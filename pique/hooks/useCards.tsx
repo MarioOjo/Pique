@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
-import { scoreResponse, updateStats } from '@/lib/claude';
+import { generateCards, scoreResponse, updateStats } from '@/lib/claude';
 import { db } from '@/lib/firebase';
+// Fallback only, for when card generation fails.
 import { MOCK_CARDS } from '@/lib/mockCards';
-import type { Card } from '@/types';
+import type { Card, UserInterest } from '@/types';
 
 const SESSION_SIZE = 10;
 
@@ -21,6 +22,57 @@ interface UseCardsResult {
   skipCard: (timeOnCard: number) => void;
   isLoading: boolean;
   error: string | null;
+  // True when generation failed and the session uses sample cards.
+  usingFallbackCards: boolean;
+}
+
+const TOP_INTEREST_COUNT = 3;
+// generateCards accepts at most this many cards per call.
+const MAX_CARDS_PER_CALL = 5;
+
+// Splits the session across interests as evenly as possible, highest
+// weighted first: 10 over 3 interests gives [4, 3, 3].
+function distributeCards(total: number, buckets: number): number[] {
+  const base = Math.floor(total / buckets);
+  const extra = total % buckets;
+  return Array.from({ length: buckets }, (_, i) =>
+    Math.min(MAX_CARDS_PER_CALL, base + (i < extra ? 1 : 0)),
+  );
+}
+
+// The user's top interests by weight, highest first.
+async function getTopInterests(userId: string): Promise<UserInterest[]> {
+  const snapshot = await getDocs(collection(db, 'users', userId, 'interests'));
+  return snapshot.docs
+    .map((doc) => ({
+      interestId: String(doc.get('interestId') ?? doc.id),
+      weight: Number(doc.get('weight') ?? 1),
+    }))
+    .sort((a, b) => b.weight - a.weight)
+    .slice(0, TOP_INTEREST_COUNT);
+}
+
+// Generates a session's worth of cards across the user's top interests,
+// in parallel. Interests whose generation fails are left out; returns an
+// empty array if every call fails (e.g. the daily limit was reached).
+async function generateSessionCards(userId: string): Promise<Card[]> {
+  const interests = await getTopInterests(userId);
+  if (interests.length === 0) return [];
+
+  const counts = distributeCards(SESSION_SIZE, interests.length);
+  const results = await Promise.allSettled(
+    interests.map((interest, i) => generateCards(userId, interest.interestId, counts[i])),
+  );
+
+  const cards: Card[] = [];
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') {
+      cards.push(...result.value.cards);
+    } else {
+      console.warn(`Card generation failed for ${interests[i].interestId}`, result.reason);
+    }
+  });
+  return cards;
 }
 
 // Fisher–Yates shuffle; returns a new array.
@@ -40,6 +92,7 @@ export function useCards(): UseCardsResult {
   const [engagedCount, setEngagedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usingFallbackCards, setUsingFallbackCards] = useState(false);
   // Mirrors currentIndex so a double tap can't record or advance twice
   // before React re-renders.
   const indexRef = useRef(0);
@@ -48,9 +101,14 @@ export function useCards(): UseCardsResult {
     setIsLoading(true);
     setError(null);
     try {
-      // TODO: replace with cards from Firestore once generateCards is deployed.
-      const cards = shuffle(MOCK_CARDS).slice(0, SESSION_SIZE);
-      setSessionCards(cards);
+      let cards = user ? await generateSessionCards(user.uid) : [];
+      const fallback = cards.length === 0;
+      if (fallback) {
+        console.warn('No generated cards available; using sample cards');
+        cards = [...MOCK_CARDS];
+      }
+      setSessionCards(shuffle(cards).slice(0, SESSION_SIZE));
+      setUsingFallbackCards(fallback);
       setCurrentIndex(0);
       setEngagedCount(0);
       indexRef.current = 0;
@@ -60,7 +118,7 @@ export function useCards(): UseCardsResult {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // Records the interaction and advances. Nothing here blocks the user:
   // the card advances first, then the write, scoring and stats run in the
@@ -136,5 +194,6 @@ export function useCards(): UseCardsResult {
     skipCard,
     isLoading,
     error,
+    usingFallbackCards,
   };
 }
