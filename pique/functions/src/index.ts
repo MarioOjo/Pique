@@ -20,10 +20,13 @@ import {
   preScore,
   scoreWithClaude,
 } from "./scoring/responseScorer";
+import {computeStreaks, localDayNumber} from "./stats/streaks";
 import {
   CardGenerationRequest,
   ScoreResponseRequest,
   ScoreResponseResult,
+  UpdateStatsRequest,
+  UpdateStatsResult,
 } from "./types";
 
 // Caps concurrent containers per function to limit cost from traffic spikes.
@@ -331,5 +334,60 @@ export const scoreResponse = onCall(
       usedClaude: result.usedClaude,
     });
     return outcome;
+  },
+);
+
+/**
+ * Recomputes the user's stats/{uid} doc (streaks and total responses)
+ * from their interactions. Safe to call repeatedly: it recalculates from
+ * scratch rather than incrementing.
+ */
+export const updateStats = onCall(
+  async (request): Promise<UpdateStatsResult> => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in");
+    }
+    const {userId, tzOffsetMinutes = 0} =
+      (request.data ?? {}) as Partial<UpdateStatsRequest>;
+    if (!userId) {
+      throw new HttpsError("invalid-argument", "userId is required");
+    }
+    if (request.auth.uid !== userId) {
+      throw new HttpsError(
+        "permission-denied",
+        "Cannot update another user's stats",
+      );
+    }
+    // Real offsets range from UTC-12 to UTC+14.
+    if (
+      !Number.isInteger(tzOffsetMinutes) ||
+      Math.abs(tzOffsetMinutes) > 14 * 60
+    ) {
+      throw new HttpsError("invalid-argument", "Invalid tzOffsetMinutes");
+    }
+
+    const snapshot = await db.collection("interactions")
+      .where("userId", "==", userId)
+      .where("skipped", "==", false)
+      .select("createdAt")
+      .get();
+
+    const days = snapshot.docs
+      .map((doc) => doc.get("createdAt"))
+      .filter((value): value is Timestamp => value instanceof Timestamp)
+      .map((value) => localDayNumber(value.toDate(), tzOffsetMinutes));
+    const today = localDayNumber(new Date(), tzOffsetMinutes);
+    const {currentStreak, longestStreak} = computeStreaks(days, today);
+    const totalResponses = snapshot.size;
+
+    await db.collection("stats").doc(userId).set({
+      userId,
+      currentStreak,
+      longestStreak,
+      totalResponses,
+      lastActive: FieldValue.serverTimestamp(),
+    });
+
+    return {currentStreak, totalResponses};
   },
 );

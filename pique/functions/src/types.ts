@@ -25,6 +25,18 @@ export interface ScoreResponseRequest {
   interactionId: string;
 }
 
+export interface UpdateStatsRequest {
+  userId: string;
+  // Device getTimezoneOffset(), so streak days follow the user's local
+  // midnight. Defaults to 0 (UTC).
+  tzOffsetMinutes?: number;
+}
+
+export interface UpdateStatsResult {
+  currentStreak: number;
+  totalResponses: number;
+}
+
 export interface ScoreResponseResult {
   score: number;
   message: string;
