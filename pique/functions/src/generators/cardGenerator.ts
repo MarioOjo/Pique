@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
 import {zodOutputFormat} from "@anthropic-ai/sdk/helpers/zod";
 import {z} from "zod";
-import {anthropicApiKey, config} from "../config";
+import {getAnthropicClient} from "../anthropicClient";
+import {config} from "../config";
 import {GeneratedCard} from "../types";
 
 // Interest display names for prompts. Keep in sync with INTERESTS in the
@@ -32,20 +32,6 @@ type ParsedCard = z.infer<typeof CardSchema>;
 const CardBatchSchema = z.object({
   cards: z.array(CardSchema),
 });
-
-let client: Anthropic | null = null;
-
-/**
- * Lazily creates the Anthropic client. The API key secret is only
- * available while a function that declares it is running, not at import.
- * @return {Anthropic} The shared client.
- */
-function getClient(): Anthropic {
-  if (!client) {
-    client = new Anthropic({apiKey: anthropicApiKey.value()});
-  }
-  return client;
-}
 
 /**
  * Builds the system prompt for Frank, Pique's AI persona.
@@ -122,7 +108,7 @@ export async function generateCardsForInterest(
   const interestName = INTEREST_NAMES[interestId];
   if (!interestName) throw new Error(`Unknown interest: ${interestId}`);
 
-  const response = await getClient().messages.parse({
+  const response = await getAnthropicClient().messages.parse({
     model: config.anthropic.model,
     max_tokens: config.anthropic.maxTokens,
     system: buildSystemPrompt(),

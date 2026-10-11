@@ -14,13 +14,37 @@ import {
   INTEREST_NAMES,
   generateCardsForInterest,
 } from "./generators/cardGenerator";
-import {CardGenerationRequest} from "./types";
+import {
+  ScoreResult,
+  adjustWeight,
+  preScore,
+  scoreWithClaude,
+} from "./scoring/responseScorer";
+import {
+  CardGenerationRequest,
+  ScoreResponseRequest,
+  ScoreResponseResult,
+} from "./types";
 
 // Caps concurrent containers per function to limit cost from traffic spikes.
 setGlobalOptions({maxInstances: 10});
 
 initializeApp();
 const db = getFirestore();
+
+/**
+ * Whether a Claude API error is worth retrying later (rate limits,
+ * server errors, network failures) rather than a bug in the request.
+ * @param {unknown} error The caught error.
+ * @return {boolean} True for transient errors.
+ */
+function isTransientAnthropicError(error: unknown): boolean {
+  return (
+    error instanceof Anthropic.RateLimitError ||
+    error instanceof Anthropic.InternalServerError ||
+    error instanceof Anthropic.APIConnectionError
+  );
+}
 
 /**
  * Extracts a loggable message; SDK errors carry bulky header objects.
@@ -145,11 +169,7 @@ export const generateCards = onCall(
         interestId,
         error: describeError(error),
       });
-      if (
-        error instanceof Anthropic.RateLimitError ||
-        error instanceof Anthropic.InternalServerError ||
-        error instanceof Anthropic.APIConnectionError
-      ) {
+      if (isTransientAnthropicError(error)) {
         throw new HttpsError(
           "unavailable",
           "Frank is busy right now. Please try again shortly.",
@@ -192,5 +212,124 @@ export const generateCards = onCall(
       cardsGenerated: generatedCards.length,
       message: `Generated ${generatedCards.length} cards for ${interestId}`,
     };
+  },
+);
+
+/**
+ * Scores an interaction the app has already written, stores the score on
+ * it, and nudges the user's weight for the card's interest.
+ *
+ * Takes the interaction's ID rather than the response itself, so it scores
+ * what was actually recorded and each interaction is scored (and moves
+ * weights) at most once, however often it's called.
+ */
+export const scoreResponse = onCall(
+  {secrets: [anthropicApiKey], timeoutSeconds: 60},
+  async (request): Promise<ScoreResponseResult> => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in");
+    }
+    const {interactionId} =
+      (request.data ?? {}) as Partial<ScoreResponseRequest>;
+    if (!interactionId || typeof interactionId !== "string") {
+      throw new HttpsError("invalid-argument", "interactionId is required");
+    }
+
+    const interactionRef = db.collection("interactions").doc(interactionId);
+    const interactionSnap = await interactionRef.get();
+    const interaction = interactionSnap.data();
+    if (!interaction) {
+      throw new HttpsError("not-found", "Interaction not found");
+    }
+    // Same response whether it's missing or someone else's, so IDs can't
+    // be probed.
+    if (interaction.userId !== request.auth.uid) {
+      throw new HttpsError("not-found", "Interaction not found");
+    }
+    if (interaction.scoredAt) {
+      return {
+        score: Number(interaction.engagementScore),
+        message: "Already scored",
+      };
+    }
+
+    const cardSnap = await db.collection("cards")
+      .doc(String(interaction.cardId))
+      .get();
+    const card = cardSnap.data();
+    const input = {
+      responseText: String(interaction.responseText ?? ""),
+      timeOnCard: Number(interaction.timeOnCard ?? 0),
+      skipped: interaction.skipped === true,
+    };
+
+    // Pre-checks first: they save a Claude call when the score is obvious.
+    let result: ScoreResult | null = preScore(input);
+    if (!result) {
+      if (!card) {
+        // e.g. a fallback mock card that was never stored in Firestore.
+        result = {
+          score: 0,
+          message: "Card not found; response not scored",
+          usedClaude: false,
+        };
+      } else {
+        try {
+          result = await scoreWithClaude(
+            String(card.body),
+            input.responseText,
+          );
+        } catch (error) {
+          logger.error("Scoring failed", {
+            interactionId,
+            error: describeError(error),
+          });
+          if (isTransientAnthropicError(error)) {
+            throw new HttpsError("unavailable", "Scoring unavailable");
+          }
+          throw new HttpsError("internal", "Scoring failed");
+        }
+      }
+    }
+    const {score, message} = result;
+    const interestId = card ? String(card.interestId) : null;
+    const userId = request.auth.uid;
+
+    // Store the score and adjust the weight together. Re-checking scoredAt
+    // inside the transaction stops two concurrent calls both applying it.
+    const outcome = await db.runTransaction(async (tx) => {
+      const current = await tx.get(interactionRef);
+      if (current.get("scoredAt")) {
+        return {
+          score: Number(current.get("engagementScore")),
+          message: "Already scored",
+        };
+      }
+
+      const interestRef = interestId ?
+        db.collection("users").doc(userId)
+          .collection("interests").doc(interestId) :
+        null;
+      const interestSnap = interestRef ? await tx.get(interestRef) : null;
+
+      tx.update(interactionRef, {
+        engagementScore: score,
+        scoredAt: FieldValue.serverTimestamp(),
+      });
+      // Only interests the user chose have a weight to adjust.
+      if (interestRef && interestSnap?.exists) {
+        const weight = Number(interestSnap.get("weight") ?? 1);
+        const next = adjustWeight(weight, score);
+        if (next !== weight) tx.update(interestRef, {weight: next});
+      }
+      return {score, message};
+    });
+
+    logger.info("Scored interaction", {
+      interactionId,
+      score: outcome.score,
+      usedClaude: result.usedClaude,
+    });
+    return outcome;
   },
 );

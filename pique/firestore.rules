@@ -31,8 +31,17 @@ service cloud.firestore {
              .hasOnly(['name', 'onboardingComplete']);
       allow delete: if false;
 
+      // Picked during onboarding at weight 1.0. After that, weights are
+      // adjusted only by the scoreResponse Cloud Function, so users can't
+      // tune their own feed weights directly.
       match /interests/{interestId} {
-        allow read, write: if isOwner(uid);
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['interestId', 'weight'])
+          && request.resource.data.interestId == interestId
+          && request.resource.data.weight == 1.0;
+        allow update: if false;
+        allow delete: if isOwner(uid);
       }
     }
 

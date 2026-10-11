@@ -19,3 +19,13 @@ export interface CardGenerationRequest {
   interestId: string;
   count: number;
 }
+
+export interface ScoreResponseRequest {
+  // An interactions/{id} doc the signed-in user wrote.
+  interactionId: string;
+}
+
+export interface ScoreResponseResult {
+  score: number;
+  message: string;
+}

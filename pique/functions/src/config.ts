@@ -12,6 +12,8 @@ export const config = {
     // A ceiling, not a target: you're billed for tokens actually generated.
     // Leaves headroom so a full batch is never cut off mid-JSON.
     maxTokens: 4096,
+    // Scoring returns a single {"score": n}.
+    scoringMaxTokens: 256,
   },
   cards: {
     batchSize: 5, // max cards generated per request
