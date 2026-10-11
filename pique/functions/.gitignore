@@ -8,3 +8,6 @@ typings/
 # Node.js dependency directory
 node_modules/
 *.local
+# Local secrets for the Functions emulator
+.secret.local
+*.local

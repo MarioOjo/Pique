@@ -13,13 +13,22 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid);
-      // New profiles must start as standard users who haven't onboarded.
+      // New profiles must start as standard users who haven't onboarded,
+      // with an empty daily card allowance.
       allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(
+             ['name', 'email', 'role', 'onboardingComplete',
+              'dailyCardCount', 'createdAt'])
         && request.resource.data.role == 'standard'
-        && request.resource.data.onboardingComplete == false;
-      // Users can't promote themselves to admin.
+        && request.resource.data.onboardingComplete == false
+        && request.resource.data.dailyCardCount == 0;
+      // Users may only edit these fields. role and the daily card counter
+      // are server-managed (Cloud Functions use the Admin SDK, which
+      // bypasses these rules), so users can't make themselves admin or
+      // reset their card limit.
       allow update: if isOwner(uid)
-        && request.resource.data.role == resource.data.role;
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['name', 'onboardingComplete']);
       allow delete: if false;
 
       match /interests/{interestId} {
@@ -41,6 +50,12 @@ service cloud.firestore {
         && request.resource.data.emoji is string
         && request.resource.data.createdAt == request.time;
       allow update, delete: if false;
+    }
+
+    // Written only by the generateCards Cloud Function (Admin SDK).
+    match /cards/{cardId} {
+      allow read: if signedIn();
+      allow write: if false;
     }
   }
 }
