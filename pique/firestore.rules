@@ -29,7 +29,7 @@ service cloud.firestore {
 
     // Seeded by the app on first onboarding. Clients may only create the
     // known interest docs with the expected shape; nobody can change them.
-    // Keep the ID list in sync with INTERESTS in pique/lib/seedInterests.ts.
+    // Keep the ID list in sync with INTERESTS in lib/seedInterests.ts.
     match /interests/{interestId} {
       allow read: if signedIn();
       allow create: if signedIn()
