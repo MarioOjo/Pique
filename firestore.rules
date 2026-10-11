@@ -1,0 +1,46 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // New profiles must start as standard users who haven't onboarded.
+      allow create: if isOwner(uid)
+        && request.resource.data.role == 'standard'
+        && request.resource.data.onboardingComplete == false;
+      // Users can't promote themselves to admin.
+      allow update: if isOwner(uid)
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+
+      match /interests/{interestId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+
+    // Seeded by the app on first onboarding. Clients may only create the
+    // known interest docs with the expected shape; nobody can change them.
+    // Keep the ID list in sync with INTERESTS in pique/lib/seedInterests.ts.
+    match /interests/{interestId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && interestId in ['philosophy', 'science', 'technology', 'culture',
+                          'psychology', 'economics', 'art', 'politics']
+        && request.resource.data.keys().hasOnly(['id', 'name', 'emoji', 'createdAt'])
+        && request.resource.data.id == interestId
+        && request.resource.data.name is string
+        && request.resource.data.emoji is string
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}
