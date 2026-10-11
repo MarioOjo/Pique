@@ -57,5 +57,36 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if false;
     }
+
+    // One doc per card response or skip. Users can only log their own
+    // interactions, in exactly the shape useCards writes. engagementScore
+    // starts at 0 so clients can't score themselves; scoring is
+    // server-side. Interactions are immutable once written.
+    match /interactions/{interactionId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+             ['userId', 'cardId', 'responseText', 'engagementScore',
+              'timeOnCard', 'skipped', 'createdAt'])
+        && request.resource.data.keys().hasAll(
+             ['userId', 'cardId', 'responseText', 'engagementScore',
+              'timeOnCard', 'skipped', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.cardId is string
+        && request.resource.data.responseText is string
+        && request.resource.data.responseText.size() <= 5000
+        && request.resource.data.engagementScore == 0
+        && request.resource.data.timeOnCard is number
+        && request.resource.data.timeOnCard >= 0
+        && request.resource.data.skipped is bool
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // Streaks and totals, maintained server-side.
+    match /stats/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false;
+    }
   }
 }
