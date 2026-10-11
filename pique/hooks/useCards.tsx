@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { scoreResponse, updateStats } from '@/lib/claude';
 import { db } from '@/lib/firebase';
 import { MOCK_CARDS } from '@/lib/mockCards';
 import type { Card } from '@/types';
@@ -61,9 +62,10 @@ export function useCards(): UseCardsResult {
     }
   }, []);
 
-  // Records the interaction and advances. The write isn't awaited before
-  // advancing so a slow or offline connection never blocks the feed;
-  // Firestore queues it and syncs when it can.
+  // Records the interaction and advances. Nothing here blocks the user:
+  // the card advances first, then the write, scoring and stats run in the
+  // background. A slow or offline connection never holds up the feed;
+  // Firestore queues the write and syncs when it can.
   const recordAndAdvance = useCallback(
     async (responseText: string, timeOnCard: number, skipped: boolean) => {
       const index = indexRef.current;
@@ -75,8 +77,9 @@ export function useCards(): UseCardsResult {
       if (!skipped) setEngagedCount((count) => count + 1);
 
       if (!user) return;
+      let interactionId: string;
       try {
-        await addDoc(collection(db, 'interactions'), {
+        const ref = await addDoc(collection(db, 'interactions'), {
           userId: user.uid,
           cardId: card.id,
           responseText,
@@ -85,9 +88,23 @@ export function useCards(): UseCardsResult {
           skipped,
           createdAt: serverTimestamp(),
         });
+        interactionId = ref.id;
       } catch (e) {
         console.warn('Failed to record interaction', e);
+        return;
       }
+
+      // Runs once the write is confirmed, so the functions can read it.
+      // Skips are scored too (they lower the interest's weight) but don't
+      // change stats, which only count responses.
+      const background: Promise<unknown>[] = [scoreResponse(interactionId)];
+      if (!skipped) background.push(updateStats(user.uid));
+      const results = await Promise.allSettled(background);
+      results.forEach((result) => {
+        if (result.status === 'rejected') {
+          console.warn('Background scoring/stats update failed', result.reason);
+        }
+      });
     },
     [sessionCards, user],
   );

@@ -36,3 +36,50 @@ export async function generateCards(
   const result = await generateCardsCallable({ userId, interestId, count });
   return result.data;
 }
+
+// Mirrors ScoreResponseRequest / ScoreResponseResult in functions/src.
+interface ScoreResponseRequest {
+  interactionId: string;
+}
+
+export interface ScoreResponseResult {
+  score: number;
+  message: string;
+}
+
+const scoreResponseCallable = httpsCallable<ScoreResponseRequest, ScoreResponseResult>(
+  functions,
+  'scoreResponse',
+);
+
+// Scores an interaction the app has already written to Firestore.
+export async function scoreResponse(interactionId: string): Promise<ScoreResponseResult> {
+  const result = await scoreResponseCallable({ interactionId });
+  return result.data;
+}
+
+// Mirrors UpdateStatsRequest / UpdateStatsResult in functions/src.
+interface UpdateStatsRequest {
+  userId: string;
+  tzOffsetMinutes: number;
+}
+
+export interface UpdateStatsResult {
+  currentStreak: number;
+  totalResponses: number;
+}
+
+const updateStatsCallable = httpsCallable<UpdateStatsRequest, UpdateStatsResult>(
+  functions,
+  'updateStats',
+);
+
+// Recomputes stats/{userId}. Sends the device timezone so streak days
+// follow the user's local midnight.
+export async function updateStats(userId: string): Promise<UpdateStatsResult> {
+  const result = await updateStatsCallable({
+    userId,
+    tzOffsetMinutes: new Date().getTimezoneOffset(),
+  });
+  return result.data;
+}
