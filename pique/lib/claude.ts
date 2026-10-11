@@ -2,10 +2,9 @@
 // All Claude API calls go through Firebase Cloud Functions, so the API key
 // never touches the client bundle.
 
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import app from './firebase';
-
-const functions = getFunctions(app);
+import { httpsCallable } from 'firebase/functions';
+// Shared instance, so the emulator connection in lib/firebase.ts applies.
+import { functions } from './firebase';
 
 // Mirrors CardGenerationRequest and the return value of generateCards in
 // functions/src.
