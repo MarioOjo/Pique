@@ -1,6 +1,7 @@
 export const Colors = {
   navy: '#1C1040',
   violet: '#7B5CF0',
+  lightViolet: '#EDE9FE',
   amber: '#F0B429',
   lightGrey: '#F5F5F7',
   midGrey: '#8B92A5',
@@ -8,6 +9,7 @@ export const Colors = {
   darkPurple: '#2D1B5A',
   white: '#FFFFFF',
   black: '#000000',
+  scrim: 'rgba(0, 0, 0, 0.5)',
 } as const;
 
 export type ColorKey = keyof typeof Colors;
