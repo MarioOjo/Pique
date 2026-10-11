@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { doc, getDoc } from 'firebase/firestore';
 import { CardComponent } from '@/components/cards/CardComponent';
 import { Button } from '@/components/ui/Button';
 import { LogoMark } from '@/components/ui/LogoMark';
@@ -20,31 +19,10 @@ import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useCards } from '@/hooks/useCards';
-import { db } from '@/lib/firebase';
+import { useStats } from '@/hooks/useStats';
 
 const ENTRANCE_OFFSET = 300;
 const ENTRANCE_MS = 250;
-
-// Reads the user's current streak from stats/{uid}; 0 if there's no doc yet.
-function useStreak(userId: string | undefined): number {
-  const [streak, setStreak] = useState(0);
-
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    getDoc(doc(db, 'stats', userId))
-      .then((snapshot) => {
-        const value = snapshot.get('currentStreak');
-        if (!cancelled) setStreak(typeof value === 'number' ? value : 0);
-      })
-      .catch((e: unknown) => console.warn('Failed to load streak', e));
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  return streak;
-}
 
 export default function FeedScreen() {
   const { user, piqueUser } = useAuth();
@@ -61,7 +39,8 @@ export default function FeedScreen() {
     error,
     usingFallbackCards,
   } = useCards();
-  const streak = useStreak(user?.uid);
+  // Live, so the header updates as soon as updateStats runs.
+  const streak = useStats(user?.uid).stats.currentStreak;
   const [translateX] = useState(() => new Animated.Value(ENTRANCE_OFFSET));
   const [progress] = useState(() => new Animated.Value(0));
 

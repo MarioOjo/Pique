@@ -1,33 +1,240 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
-import { PlaceholderScreen } from '@/components/ui/PlaceholderScreen';
+import { Colors } from '@/constants/colors';
+import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { useStats } from '@/hooks/useStats';
+import { useTopInterests } from '@/hooks/useTopInterests';
+import { INTERESTS } from '@/lib/seedInterests';
+
+const TOP_TOPIC_COUNT = 3;
+// Interest weights are capped at this by scoreResponse.
+const MAX_WEIGHT = 3.0;
+const AVATAR_SIZE = 56;
+
+function interestLabel(interestId: string): string {
+  const interest = INTERESTS.find((item) => item.id === interestId);
+  return interest ? `${interest.emoji}  ${interest.name}` : interestId;
+}
 
 export default function ProfileScreen() {
-  const { signOut } = useAuth();
+  const { user, piqueUser, signOut } = useAuth();
+  const { stats, loading: statsLoading } = useStats(user?.uid);
+  const { interests, loading: interestsLoading } = useTopInterests(user?.uid, TOP_TOPIC_COUNT);
   const [signingOut, setSigningOut] = useState(false);
+
+  const name = piqueUser?.name?.trim() || 'Pique user';
+  const email = piqueUser?.email ?? user?.email ?? '';
+  const initial = name.charAt(0).toUpperCase();
 
   const handleSignOut = async () => {
     setSigningOut(true);
     try {
       await signOut();
-    } finally {
+    } catch (e) {
+      console.warn('Sign out failed', e);
       setSigningOut(false);
     }
   };
 
   return (
-    <PlaceholderScreen title="Profile coming soon">
-      <View style={styles.action}>
-        <Button title="Sign out" onPress={handleSignOut} loading={signingOut} />
-      </View>
-    </PlaceholderScreen>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.header}>Profile</Text>
+
+        <View style={styles.identity}>
+          <View style={styles.avatar} accessibilityElementsHidden>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+          <View style={styles.identityText}>
+            <Text style={styles.name} numberOfLines={1}>
+              {name}
+            </Text>
+            {email !== '' && (
+              <Text style={styles.email} numberOfLines={1}>
+                {email}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statCard} accessibilityLabel={`${stats.currentStreak} day streak`}>
+            <Text style={styles.statValue}>
+              <Text style={styles.flame}>🔥 </Text>
+              {statsLoading ? '–' : stats.currentStreak}
+            </Text>
+            <Text style={styles.statLabel}>day streak</Text>
+          </View>
+          <View
+            style={styles.statCard}
+            accessibilityLabel={`${stats.totalResponses} cards completed`}
+          >
+            <Text style={styles.statValue}>{statsLoading ? '–' : stats.totalResponses}</Text>
+            <Text style={styles.statLabel}>cards completed</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Top topics</Text>
+          {interestsLoading ? (
+            <ActivityIndicator color={Colors.violet} />
+          ) : interests.length === 0 ? (
+            <Text style={styles.empty}>No topics yet.</Text>
+          ) : (
+            interests.map((interest) => {
+              const percent = Math.min(100, (interest.weight / MAX_WEIGHT) * 100);
+              return (
+                <View
+                  key={interest.interestId}
+                  style={styles.topic}
+                  accessibilityLabel={`${interestLabel(interest.interestId)}, weight ${interest.weight.toFixed(1)} of ${MAX_WEIGHT}`}
+                >
+                  <View style={styles.topicHeader}>
+                    <Text style={styles.topicName}>{interestLabel(interest.interestId)}</Text>
+                    <Text style={styles.topicWeight}>{interest.weight.toFixed(1)}</Text>
+                  </View>
+                  <View style={styles.barTrack}>
+                    {/* Width depends on data, so it can't live in the StyleSheet. */}
+                    <View style={[styles.barFill, { width: `${percent}%` }]} />
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </View>
+
+        <View style={styles.signOut}>
+          <Button title="Sign out" variant="outline" onPress={handleSignOut} loading={signingOut} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  action: {
-    alignSelf: 'stretch',
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.lightGrey,
+  },
+  content: {
+    flexGrow: 1,
+    padding: Theme.spacing.lg,
+    gap: Theme.spacing.lg,
+  },
+  header: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.lg,
+  },
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.md,
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Colors.navy,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    color: Colors.white,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.lg + Theme.spacing.xs,
+  },
+  identityText: {
+    flex: 1,
+    gap: Theme.spacing.xs / 2,
+  },
+  name: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 18,
+  },
+  email: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 14,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: Theme.spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
+    gap: Theme.spacing.xs,
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  statValue: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.xl,
+  },
+  flame: {
+    color: Colors.amber,
+  },
+  statLabel: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+  },
+  section: {
+    gap: Theme.spacing.md,
+  },
+  sectionLabel: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 12,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  empty: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 14,
+  },
+  topic: {
+    gap: Theme.spacing.xs + Theme.spacing.xs / 2,
+  },
+  topicHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  topicName: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 14,
+  },
+  topicWeight: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 12,
+  },
+  barTrack: {
+    height: Theme.spacing.sm,
+    backgroundColor: Colors.borderGrey,
+    borderRadius: Theme.borderRadius.full,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: Colors.violet,
+    borderRadius: Theme.borderRadius.full,
+  },
+  signOut: {
+    marginTop: 'auto',
+    paddingTop: Theme.spacing.lg,
   },
 });

@@ -7,10 +7,19 @@ interface ButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  // 'outline': transparent with a navy border, for secondary actions.
+  variant?: 'solid' | 'outline';
 }
 
-export function Button({ title, onPress, loading = false, disabled = false }: ButtonProps) {
+export function Button({
+  title,
+  onPress,
+  loading = false,
+  disabled = false,
+  variant = 'solid',
+}: ButtonProps) {
   const isDisabled = disabled || loading;
+  const outline = variant === 'outline';
 
   return (
     <Pressable
@@ -20,15 +29,16 @@ export function Button({ title, onPress, loading = false, disabled = false }: Bu
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,
+        outline && styles.outline,
         pressed && styles.pressed,
         disabled && !loading && styles.disabled,
         loading && styles.loading,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={Colors.white} />
+        <ActivityIndicator color={outline ? Colors.navy : Colors.white} />
       ) : (
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, outline && styles.outlineTitle]}>{title}</Text>
       )}
     </Pressable>
   );
@@ -42,6 +52,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: Theme.spacing.xxl + Theme.spacing.sm,
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    borderColor: Colors.navy,
+    borderWidth: 1.5,
+  },
+  outlineTitle: {
+    color: Colors.navy,
   },
   pressed: {
     opacity: 0.85,
