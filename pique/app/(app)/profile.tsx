@@ -61,13 +61,20 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard} accessibilityLabel={`${stats.currentStreak} day streak`}>
-            <Text style={styles.statValue}>
-              <Text style={styles.flame}>🔥 </Text>
-              {statsLoading ? '–' : stats.currentStreak}
-            </Text>
-            <Text style={styles.statLabel}>day streak</Text>
-          </View>
+          {!statsLoading && stats.currentStreak === 0 ? (
+            <View style={styles.statCard}>
+              <Text style={styles.flame}>🔥</Text>
+              <Text style={styles.streakPrompt}>Start your first streak today</Text>
+            </View>
+          ) : (
+            <View style={styles.statCard} accessibilityLabel={`${stats.currentStreak} day streak`}>
+              <Text style={styles.statValue}>
+                <Text style={styles.flame}>🔥 </Text>
+                {statsLoading ? '–' : stats.currentStreak}
+              </Text>
+              <Text style={styles.statLabel}>day streak</Text>
+            </View>
+          )}
           <View
             style={styles.statCard}
             accessibilityLabel={`${stats.totalResponses} cards completed`}
@@ -184,6 +191,12 @@ const styles = StyleSheet.create({
   },
   flame: {
     color: Colors.amber,
+  },
+  streakPrompt: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 14,
+    lineHeight: 20,
   },
   statLabel: {
     color: Colors.midGrey,

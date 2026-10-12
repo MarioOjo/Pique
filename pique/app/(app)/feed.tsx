@@ -83,7 +83,7 @@ export default function FeedScreen() {
       return (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.violet} />
-          <Text style={styles.message}>Frank is writing your cards…</Text>
+          <Text style={[styles.message, styles.loadingMessage]}>Frank is writing your cards…</Text>
         </View>
       );
     }
@@ -244,6 +244,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Theme.spacing.lg,
     gap: Theme.spacing.sm,
+  },
+  loadingMessage: {
+    fontStyle: 'italic',
   },
   message: {
     color: Colors.midGrey,

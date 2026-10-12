@@ -39,6 +39,8 @@ const PULSE_MS = 200; // Submit button 1 → 0.95 → 1
 const FLASH_MS = 150; // card border grey → violet → grey
 const ACK_DELAY_MS = 400; // after the counterpoint appears
 const ACK_FADE_MS = 300;
+const SKIP_NOTE_MS = 2000;
+const SKIP_FADE_MS = 300;
 
 function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -71,8 +73,14 @@ export function CardComponent({
   const [borderFlash] = useState(() => new Animated.Value(0));
   const [ackOpacity] = useState(() => new Animated.Value(0));
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSkipping, setIsSkipping] = useState(false);
+  const [skipNoteOpacity] = useState(() => new Animated.Value(1));
   // Guards against a double tap reporting the same card twice.
   const isDone = useRef(false);
+  const skipAnimation = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Don't leave the skip timer running if the card unmounts mid-way.
+  useEffect(() => () => skipAnimation.current?.stop(), []);
 
   // Frank's reaction fades in shortly after the post-submit content shows.
   useEffect(() => {
@@ -87,7 +95,10 @@ export function CardComponent({
 
   const isPerspective = card.type === 'perspective';
   const trimmedLength = responseText.trim().length;
-  const canSubmit = isPerspective ? selectedChoice !== null : trimmedLength >= MIN_RECALL_LENGTH;
+  const hasResponse = isPerspective ? selectedChoice !== null : trimmedLength >= MIN_RECALL_LENGTH;
+  const canSubmit = hasResponse && !isSkipping;
+  // Responses are locked once submitted or while a skip plays out.
+  const isLocked = hasSubmitted || isSkipping;
   const showImage = Boolean(card.imageUrl) && !imageFailed;
 
   const finish = (report: (elapsed: number) => void) => {
@@ -101,7 +112,25 @@ export function CardComponent({
     finish((elapsed) => onSubmit(text, elapsed));
   };
 
-  const handleSkip = () => finish(onSkip);
+  // Shows "Skipped — Frank noticed." for 2s, fades it, then advances. Time
+  // on card is measured at the tap, so the pause doesn't inflate it.
+  const handleSkip = () => {
+    if (isDone.current || isSubmitting) return;
+    isDone.current = true;
+    const elapsed = Date.now() - startTime;
+    setIsSkipping(true);
+    skipAnimation.current = Animated.sequence([
+      Animated.delay(SKIP_NOTE_MS),
+      Animated.timing(skipNoteOpacity, {
+        toValue: 0,
+        duration: SKIP_FADE_MS,
+        useNativeDriver: true,
+      }),
+    ]);
+    skipAnimation.current.start(({ finished }) => {
+      if (finished) onSkip(elapsed);
+    });
+  };
 
   // Pulse the button and flash the card border, then reveal what comes
   // after submitting.
@@ -169,9 +198,9 @@ export function CardComponent({
                         key={choice}
                         style={[styles.choice, selected && styles.choiceSelected]}
                         onPress={() => setSelectedChoice(choice)}
-                        disabled={hasSubmitted}
+                        disabled={isLocked}
                         accessibilityRole="radio"
-                        accessibilityState={{ selected, disabled: hasSubmitted }}
+                        accessibilityState={{ selected, disabled: isLocked }}
                       >
                         <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
                           {capitalise(choice)}
@@ -193,7 +222,7 @@ export function CardComponent({
                     multiline
                     maxLength={2000}
                     textAlignVertical="top"
-                    editable={!hasSubmitted}
+                    editable={!isLocked}
                     accessibilityLabel="Your response"
                   />
                   <Text
@@ -233,10 +262,24 @@ export function CardComponent({
         </View>
       </Animated.View>
 
-      {!hasSubmitted && (
-        <Pressable style={styles.skip} onPress={handleSkip} accessibilityRole="button">
+      {!hasSubmitted && !isSubmitting && (
+        <Pressable
+          style={styles.skip}
+          onPress={handleSkip}
+          disabled={isSkipping}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: isSkipping }}
+        >
           <Text style={styles.skipText}>Skip this card</Text>
         </Pressable>
+      )}
+      {isSkipping && (
+        <Animated.Text
+          style={[styles.skipNote, { opacity: skipNoteOpacity }]}
+          accessibilityLiveRegion="polite"
+        >
+          Skipped — Frank noticed.
+        </Animated.Text>
       )}
     </View>
   );
@@ -405,6 +448,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Theme.spacing.sm + Theme.spacing.xs, // 12
     marginTop: Theme.spacing.xs,
+  },
+  skipNote: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   skipText: {
     color: Colors.midGrey,
