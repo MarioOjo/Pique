@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
@@ -18,8 +18,34 @@ type Choice = 'agree' | 'disagree';
 const MIN_RECALL_LENGTH = 20;
 const MIN_TOUCH_TARGET = 44;
 
+// Frank's lead-in to the counterpoint, varied per card.
+const COUNTERPOINT_LABELS = [
+  'Here’s what you might be missing:',
+  'Frank sees it differently:',
+  'The other side of this:',
+  'Worth considering:',
+] as const;
+
+// Frank's one-line reaction after a response. The real score is worked
+// out in the background, so these acknowledge rather than grade.
+const ACKNOWLEDGEMENTS = [
+  'Frank noted your response.',
+  'Interesting take.',
+  'Good answer.',
+  'Frank’s listening.',
+] as const;
+
+const PULSE_MS = 200; // Submit button 1 → 0.95 → 1
+const FLASH_MS = 150; // card border grey → violet → grey
+const ACK_DELAY_MS = 400; // after the counterpoint appears
+const ACK_FADE_MS = 300;
+
 function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function pickRandom<T>(items: readonly T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 // Render with key={card.id} so each card mounts fresh: that resets the
@@ -38,8 +64,26 @@ export function CardComponent({
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  // Picked once on mount, so they stay the same for this card.
+  const [counterpointLabel] = useState(() => pickRandom(COUNTERPOINT_LABELS));
+  const [acknowledgement] = useState(() => pickRandom(ACKNOWLEDGEMENTS));
+  const [submitScale] = useState(() => new Animated.Value(1));
+  const [borderFlash] = useState(() => new Animated.Value(0));
+  const [ackOpacity] = useState(() => new Animated.Value(0));
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Guards against a double tap reporting the same card twice.
   const isDone = useRef(false);
+
+  // Frank's reaction fades in shortly after the post-submit content shows.
+  useEffect(() => {
+    if (!hasSubmitted) return;
+    Animated.timing(ackOpacity, {
+      toValue: 1,
+      delay: ACK_DELAY_MS,
+      duration: ACK_FADE_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [hasSubmitted, ackOpacity]);
 
   const isPerspective = card.type === 'perspective';
   const trimmedLength = responseText.trim().length;
@@ -59,10 +103,36 @@ export function CardComponent({
 
   const handleSkip = () => finish(onSkip);
 
+  // Pulse the button and flash the card border, then reveal what comes
+  // after submitting.
+  const handleSubmit = () => {
+    if (!canSubmit || isSubmitting) return;
+    setIsSubmitting(true);
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(submitScale, { toValue: 0.95, duration: PULSE_MS / 2, useNativeDriver: true }),
+        Animated.timing(submitScale, { toValue: 1, duration: PULSE_MS / 2, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        // Colours can't animate on the native driver.
+        Animated.timing(borderFlash, { toValue: 1, duration: FLASH_MS / 2, useNativeDriver: false }),
+        Animated.timing(borderFlash, { toValue: 0, duration: FLASH_MS / 2, useNativeDriver: false }),
+      ]),
+    ]).start(() => setHasSubmitted(true));
+  };
+
+  // Animated values have to be passed as style objects.
+  const surfaceBorder = {
+    borderColor: borderFlash.interpolate({
+      inputRange: [0, 1],
+      outputRange: [Colors.borderGrey, Colors.violet],
+    }),
+  };
+
   return (
     <View>
-      <View
-        style={styles.surface}
+      <Animated.View
+        style={[styles.surface, surfaceBorder]}
         accessibilityLabel={`Card ${cardNumber} of ${totalCards}`}
       >
         <View style={styles.clip}>
@@ -141,23 +211,27 @@ export function CardComponent({
                 <>
                   {isPerspective && card.counterpoint && (
                     <View style={styles.counterpoint}>
-                      <Text style={styles.counterpointLabel}>Now consider the other side</Text>
+                      <Text style={styles.counterpointLabel}>{counterpointLabel}</Text>
                       <Text style={styles.counterpointText}>{card.counterpoint}</Text>
                     </View>
                   )}
+                  <Animated.Text
+                    style={[styles.acknowledgement, { opacity: ackOpacity }]}
+                    accessibilityLiveRegion="polite"
+                  >
+                    {acknowledgement}
+                  </Animated.Text>
                   <Button title="Next card →" onPress={handleNext} />
                 </>
               ) : (
-                <Button
-                  title="Submit"
-                  onPress={() => setHasSubmitted(true)}
-                  disabled={!canSubmit}
-                />
+                <Animated.View style={{ transform: [{ scale: submitScale }] }}>
+                  <Button title="Submit" onPress={handleSubmit} disabled={!canSubmit} />
+                </Animated.View>
               )}
             </View>
           </View>
         </View>
-      </View>
+      </Animated.View>
 
       {!hasSubmitted && (
         <Pressable style={styles.skip} onPress={handleSkip} accessibilityRole="button">
@@ -173,6 +247,8 @@ const CONTENT_PADDING = Theme.spacing.md + Theme.spacing.xs; // 20
 const styles = StyleSheet.create({
   surface: {
     backgroundColor: Colors.white,
+    // Colour is animated: it flashes violet on submit.
+    borderWidth: 1,
     borderRadius: Theme.borderRadius.lg,
     shadowColor: Colors.navy,
     shadowOffset: { width: 0, height: 2 },
@@ -314,6 +390,14 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     lineHeight: 20,
+  },
+  acknowledgement: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the box; parent gap is 16
   },
   skip: {
     alignSelf: 'center',
