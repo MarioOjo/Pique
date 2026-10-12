@@ -13,13 +13,14 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if isOwner(uid);
-      // New profiles must start as standard users who haven't onboarded,
-      // with an empty daily card allowance.
+      // New profiles must start as standard users who haven't seen the
+      // Frank intro or onboarded, with an empty daily card allowance.
       allow create: if isOwner(uid)
         && request.resource.data.keys().hasOnly(
-             ['name', 'email', 'role', 'onboardingComplete',
-              'dailyCardCount', 'createdAt'])
+             ['name', 'email', 'role', 'frankIntroSeen',
+              'onboardingComplete', 'dailyCardCount', 'createdAt'])
         && request.resource.data.role == 'standard'
+        && request.resource.data.frankIntroSeen == false
         && request.resource.data.onboardingComplete == false
         && request.resource.data.dailyCardCount == 0;
       // Users may only edit these fields. role and the daily card counter
@@ -28,7 +29,7 @@ service cloud.firestore {
       // reset their card limit.
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'onboardingComplete']);
+             .hasOnly(['name', 'onboardingComplete', 'frankIntroSeen']);
       allow delete: if false;
 
       // Picked during onboarding at weight 1.0. After that, weights are
