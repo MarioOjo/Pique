@@ -31,7 +31,6 @@ const COUNTERPOINT_LABELS = [
 const ACKNOWLEDGEMENTS = [
   'Frank noted your response.',
   'Interesting take.',
-  'Good answer.',
   'Frank’s listening.',
 ] as const;
 

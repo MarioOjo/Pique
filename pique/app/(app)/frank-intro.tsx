@@ -81,10 +81,6 @@ export default function FrankIntroScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.note}>
-            Your responses are private. Frank reads them to score engagement — your buddy only
-            sees whether you showed up.
-          </Text>
           {error && <Text style={styles.error}>{error}</Text>}
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
@@ -173,14 +169,6 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     paddingTop: Theme.spacing.xl,
     gap: Theme.spacing.md,
-  },
-  note: {
-    color: Colors.midGrey,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    lineHeight: 19,
   },
   error: {
     color: Colors.amber,
