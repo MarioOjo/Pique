@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 import { CardComponent } from '@/components/cards/CardComponent';
+import { SessionComplete } from '@/components/feed/SessionComplete';
 import { Button } from '@/components/ui/Button';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { WelcomeBanner } from '@/components/ui/WelcomeBanner';
@@ -28,6 +30,7 @@ export default function FeedScreen() {
   const { user, piqueUser } = useAuth();
   const {
     currentCard,
+    sessionCards,
     currentIndex,
     totalCards,
     engagedCount,
@@ -39,8 +42,10 @@ export default function FeedScreen() {
     error,
     usingFallbackCards,
   } = useCards();
-  // Live, so the header updates as soon as updateStats runs.
-  const streak = useStats(user?.uid).stats.currentStreak;
+  // Live, so the header and session summary update as soon as updateStats runs.
+  const { stats } = useStats(user?.uid);
+  const streak = stats.currentStreak;
+  const router = useRouter();
   const [translateX] = useState(() => new Animated.Value(ENTRANCE_OFFSET));
   const [progress] = useState(() => new Animated.Value(0));
 
@@ -96,16 +101,13 @@ export default function FeedScreen() {
 
     if (isSessionComplete || !currentCard) {
       return (
-        <View style={styles.centered}>
-          <Text style={styles.celebration}>🎉</Text>
-          <Text style={styles.completeHeading}>Session complete!</Text>
-          <Text style={styles.message}>
-            {engagedCount} {engagedCount === 1 ? 'card' : 'cards'} engaged with
-          </Text>
-          <View style={styles.action}>
-            <Button title="Start new session" onPress={loadCards} />
-          </View>
-        </View>
+        <SessionComplete
+          cardsCompleted={engagedCount}
+          topicsExplored={new Set(sessionCards.map((card) => card.interestId)).size}
+          bestStreak={stats.longestStreak}
+          onStartNewSession={loadCards}
+          onViewProfile={() => router.navigate('/profile')}
+        />
       );
     }
 
@@ -242,14 +244,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: Theme.spacing.lg,
     gap: Theme.spacing.sm,
-  },
-  celebration: {
-    fontSize: Theme.fontSize.xxl + Theme.fontSize.md,
-  },
-  completeHeading: {
-    color: Colors.navy,
-    fontFamily: Theme.fontFamily.semiBold,
-    fontSize: 24,
   },
   message: {
     color: Colors.midGrey,

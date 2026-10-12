@@ -8,7 +8,8 @@ interface ButtonProps {
   loading?: boolean;
   disabled?: boolean;
   // 'outline': transparent with a navy border, for secondary actions.
-  variant?: 'solid' | 'outline';
+  // 'accent': amber with navy text, for primary actions on navy screens.
+  variant?: 'solid' | 'outline' | 'accent';
 }
 
 export function Button({
@@ -20,6 +21,7 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const outline = variant === 'outline';
+  const accent = variant === 'accent';
 
   return (
     <Pressable
@@ -30,15 +32,16 @@ export function Button({
       style={({ pressed }) => [
         styles.button,
         outline && styles.outline,
+        accent && styles.accent,
         pressed && styles.pressed,
         disabled && !loading && styles.disabled,
         loading && styles.loading,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={outline ? Colors.navy : Colors.white} />
+        <ActivityIndicator color={outline || accent ? Colors.navy : Colors.white} />
       ) : (
-        <Text style={[styles.title, outline && styles.outlineTitle]}>{title}</Text>
+        <Text style={[styles.title, (outline || accent) && styles.darkTitle]}>{title}</Text>
       )}
     </Pressable>
   );
@@ -58,7 +61,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.navy,
     borderWidth: 1.5,
   },
-  outlineTitle: {
+  accent: {
+    backgroundColor: Colors.amber,
+  },
+  darkTitle: {
     color: Colors.navy,
   },
   pressed: {
