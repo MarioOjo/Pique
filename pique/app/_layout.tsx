@@ -17,11 +17,17 @@ function RootNavigator() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const onFrankIntro = pathname === '/frank-intro';
     const onOnboarding = pathname === '/onboarding';
-    const inMainApp = segments[0] === '(app)' && !onOnboarding;
+    const inMainApp = segments[0] === '(app)' && !onOnboarding && !onFrankIntro;
 
+    // Every step uses replace, so back never returns to a finished step.
+    // The intro only applies before onboarding: users who onboarded before
+    // it existed (no frankIntroSeen field) go straight to the feed.
     if (!user) {
       if (!inAuthGroup) router.replace('/login');
+    } else if (!piqueUser?.onboardingComplete && !piqueUser?.frankIntroSeen) {
+      if (!onFrankIntro) router.replace('/frank-intro');
     } else if (!piqueUser?.onboardingComplete) {
       if (!onOnboarding) router.replace('/onboarding');
     } else if (!inMainApp) {

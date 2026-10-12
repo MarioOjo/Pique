@@ -37,6 +37,8 @@ function toPiqueUser(snapshot: DocumentSnapshot): PiqueUser | null {
     name: data.name,
     email: data.email,
     role: data.role,
+    // Missing on accounts created before the intro screen existed.
+    frankIntroSeen: data.frankIntroSeen === true,
     onboardingComplete: data.onboardingComplete === true,
     dailyCardCount: data.dailyCardCount,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: name.trim(),
       email: newUser.email ?? email.trim(),
       role: 'standard',
+      frankIntroSeen: false,
       onboardingComplete: false,
       dailyCardCount: 0,
       createdAt: serverTimestamp(),

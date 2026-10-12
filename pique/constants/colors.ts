@@ -7,6 +7,8 @@ export const Colors = {
   midGrey: '#8B92A5',
   borderGrey: '#E5E7EB',
   darkPurple: '#2D1B5A',
+  // Body text on navy backgrounds.
+  lavenderGrey: '#D4D0E8',
   white: '#FFFFFF',
   black: '#000000',
   scrim: 'rgba(0, 0, 0, 0.5)',

@@ -63,6 +63,8 @@ export interface User {
   name: string;
   email: string;
   role: 'standard' | 'admin';
+  // Set once the user taps "Meet Frank" on the intro screen.
+  frankIntroSeen: boolean;
   onboardingComplete: boolean;
   dailyCardCount: number;
   createdAt: Date;

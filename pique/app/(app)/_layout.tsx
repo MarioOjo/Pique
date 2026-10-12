@@ -29,6 +29,13 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="frank-intro"
+        options={{
+          href: null,
+          tabBarStyle: styles.hiddenTabBar,
+        }}
+      />
+      <Tabs.Screen
         name="onboarding"
         options={{
           href: null,
