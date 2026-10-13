@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
+import { INTERESTS } from '@/lib/seedInterests';
 import { Theme } from '@/constants/theme';
 import type { Card } from '@/types';
 
@@ -93,6 +94,9 @@ export function CardComponent({
   }, [hasSubmitted, ackOpacity]);
 
   const isPerspective = card.type === 'perspective';
+  const topicName =
+    INTERESTS.find((interest) => interest.id === card.interestId)?.name ??
+    capitalise(card.interestId);
   const trimmedLength = responseText.trim().length;
   const hasResponse = isPerspective ? selectedChoice !== null : trimmedLength >= MIN_RECALL_LENGTH;
   const canSubmit = hasResponse && !isSkipping;
@@ -174,7 +178,7 @@ export function CardComponent({
                 accessibilityIgnoresInvertColors
               />
               <View style={styles.topicBadge}>
-                <Text style={styles.topicText}>{capitalise(card.interestId)}</Text>
+                <Text style={styles.topicText}>{topicName}</Text>
               </View>
               <View style={styles.credit}>
                 <Text style={styles.creditText}>📷 {card.imageCredit ?? 'Unsplash'}</Text>

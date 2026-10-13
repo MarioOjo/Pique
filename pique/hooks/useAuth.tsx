@@ -39,6 +39,7 @@ function toPiqueUser(snapshot: DocumentSnapshot): PiqueUser | null {
     role: data.role,
     // Missing on accounts created before the intro screen existed.
     frankIntroSeen: data.frankIntroSeen === true,
+    avatarId: typeof data.avatarId === 'string' ? data.avatarId : undefined,
     onboardingComplete: data.onboardingComplete === true,
     dailyCardCount: data.dailyCardCount,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),

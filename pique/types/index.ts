@@ -65,6 +65,8 @@ export interface User {
   role: 'standard' | 'admin';
   // Set once the user taps "Meet Frank" on the intro screen.
   frankIntroSeen: boolean;
+  // One of the presets in lib/avatars.ts; initials are shown when unset.
+  avatarId?: string;
   onboardingComplete: boolean;
   dailyCardCount: number;
   createdAt: Date;

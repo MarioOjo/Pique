@@ -12,6 +12,15 @@ export const Colors = {
   white: '#FFFFFF',
   black: '#000000',
   scrim: 'rgba(0, 0, 0, 0.5)',
+  // Destructive actions such as signing out.
+  danger: '#DC2626',
+  // Avatar preset backgrounds.
+  avatarTeal: '#14B8A6',
+  avatarCoral: '#F97362',
+  avatarPurple: '#A855F7',
+  avatarGreen: '#22C55E',
+  avatarOrange: '#F97316',
+  avatarGrey: '#6B7280',
 } as const;
 
 export type ColorKey = keyof typeof Colors;

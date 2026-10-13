@@ -49,3 +49,4 @@ firestore-debug.log
 
 # Firebase emulator data (--import / --export-on-exit)
 emulator-data/
+firebase-export-*/

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '@/components/ui/Button';
+import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +13,7 @@ import { INTERESTS } from '@/lib/seedInterests';
 const TOP_TOPIC_COUNT = 3;
 // Interest weights are capped at this by scoreResponse.
 const MAX_WEIGHT = 3.0;
-const AVATAR_SIZE = 56;
+const MIN_TOUCH_TARGET = 44;
 
 function interestLabel(interestId: string): string {
   const interest = INTERESTS.find((item) => item.id === interestId);
@@ -20,34 +21,33 @@ function interestLabel(interestId: string): string {
 }
 
 export default function ProfileScreen() {
-  const { user, piqueUser, signOut } = useAuth();
+  const router = useRouter();
+  const { user, piqueUser } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
   const { interests, loading: interestsLoading } = useTopInterests(user?.uid, TOP_TOPIC_COUNT);
-  const [signingOut, setSigningOut] = useState(false);
 
   const name = piqueUser?.name?.trim() || 'Pique user';
   const email = piqueUser?.email ?? user?.email ?? '';
-  const initial = name.charAt(0).toUpperCase();
-
-  const handleSignOut = async () => {
-    setSigningOut(true);
-    try {
-      await signOut();
-    } catch (e) {
-      console.warn('Sign out failed', e);
-      setSigningOut(false);
-    }
-  };
 
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.header}>Profile</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header} accessibilityRole="header">
+            Profile
+          </Text>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={22} color={Colors.navy} />
+          </Pressable>
+        </View>
 
         <View style={styles.identity}>
-          <View style={styles.avatar} accessibilityElementsHidden>
-            <Text style={styles.avatarText}>{initial}</Text>
-          </View>
+          <Avatar name={name} avatarId={piqueUser?.avatarId} />
           <View style={styles.identityText}>
             <Text style={styles.name} numberOfLines={1}>
               {name}
@@ -112,10 +112,6 @@ export default function ProfileScreen() {
             })
           )}
         </View>
-
-        <View style={styles.signOut}>
-          <Button title="Sign out" variant="outline" onPress={handleSignOut} loading={signingOut} />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -131,6 +127,21 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.lg,
     gap: Theme.spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    // Keeps the title aligned with the content while the icon's 44pt
+    // touch area extends into the padding.
+    marginVertical: -Theme.spacing.sm,
+    marginRight: -Theme.spacing.sm - Theme.spacing.xs,
+  },
+  iconButton: {
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   header: {
     color: Colors.navy,
     fontFamily: Theme.fontFamily.semiBold,
@@ -140,19 +151,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Theme.spacing.md,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: Colors.white,
-    fontFamily: Theme.fontFamily.semiBold,
-    fontSize: Theme.fontSize.lg + Theme.spacing.xs,
   },
   identityText: {
     flex: 1,
@@ -245,9 +243,5 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: Colors.violet,
     borderRadius: Theme.borderRadius.full,
-  },
-  signOut: {
-    marginTop: 'auto',
-    paddingTop: Theme.spacing.lg,
   },
 });

@@ -4,6 +4,7 @@ import {
   Animated,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { CardComponent } from '@/components/cards/CardComponent';
 import { SessionComplete } from '@/components/feed/SessionComplete';
 import { Button } from '@/components/ui/Button';
@@ -25,6 +27,7 @@ import { useStats } from '@/hooks/useStats';
 
 const ENTRANCE_OFFSET = 300;
 const ENTRANCE_MS = 250;
+const MIN_TOUCH_TARGET = 44;
 
 export default function FeedScreen() {
   const { user, piqueUser } = useAuth();
@@ -161,9 +164,19 @@ export default function FeedScreen() {
             <LogoMark size="small" />
             <Text style={styles.brandText}>Pique</Text>
           </View>
-          <View style={styles.streak} accessibilityLabel={`${streak} day streak`}>
-            <Text style={styles.streakIcon}>🔥</Text>
-            <Text style={styles.streakText}>{streak}</Text>
+          <View style={styles.headerActions}>
+            <View style={styles.streak} accessibilityLabel={`${streak} day streak`}>
+              <Text style={styles.streakIcon}>🔥</Text>
+              <Text style={styles.streakText}>{streak}</Text>
+            </View>
+            <Pressable
+              style={styles.iconButton}
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+            >
+              <Ionicons name="settings-outline" size={22} color={Colors.white} />
+            </Pressable>
           </View>
         </View>
       </SafeAreaView>
@@ -191,8 +204,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Theme.spacing.md,
-    paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
+    paddingLeft: Theme.spacing.md,
+    paddingRight: Theme.spacing.xs,
+    paddingVertical: Theme.spacing.xs,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs,
+  },
+  iconButton: {
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   brand: {
     flexDirection: 'row',
