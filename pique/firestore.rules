@@ -11,6 +11,20 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function changed(field) {
+      return field in request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    // Keep in sync with AVATAR_PRESETS in lib/avatars.ts.
+    function validAvatarId(value) {
+      return value in ['philosophy', 'science', 'technology', 'culture',
+                       'psychology', 'economics', 'art', 'politics'];
+    }
+
+    function validName(value) {
+      return value is string && value.size() > 0 && value.size() <= 50;
+    }
+
     match /users/{uid} {
       allow read: if isOwner(uid);
       // New profiles must start as standard users who haven't seen the
@@ -29,7 +43,10 @@ service cloud.firestore {
       // reset their card limit.
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys()
-             .hasOnly(['name', 'onboardingComplete', 'frankIntroSeen']);
+             .hasOnly(['name', 'onboardingComplete', 'frankIntroSeen',
+                       'avatarId'])
+        && (!changed('name') || validName(request.resource.data.name))
+        && (!changed('avatarId') || validAvatarId(request.resource.data.avatarId));
       allow delete: if false;
 
       // Picked during onboarding at weight 1.0. After that, weights are
