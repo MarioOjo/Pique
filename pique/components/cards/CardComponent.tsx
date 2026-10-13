@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { INTERESTS } from '@/lib/seedInterests';
@@ -37,10 +37,14 @@ const ACKNOWLEDGEMENTS = [
 
 const PULSE_MS = 200; // Submit button 1 → 0.95 → 1
 const FLASH_MS = 150; // card border grey → violet → grey
-const ACK_DELAY_MS = 400; // after the counterpoint appears
+const ACK_DELAY_MS = 500; // once the counterpoint has settled
 const ACK_FADE_MS = 300;
 const SKIP_NOTE_MS = 2000;
 const SKIP_FADE_MS = 300;
+const PRESS_IN_MS = 120; // Agree/Disagree shrink to 0.96 on press-in
+const COUNTERPOINT_DELAY_MS = 200;
+const COUNTERPOINT_REVEAL_MS = 300;
+const COUNTERPOINT_OFFSET = 8; // slides up this far as it fades in
 
 function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -75,6 +79,12 @@ export function CardComponent({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSkipping, setIsSkipping] = useState(false);
   const [skipNoteOpacity] = useState(() => new Animated.Value(1));
+  // One scale per choice, so only the pressed button reacts.
+  const [choiceScales] = useState(() => ({
+    agree: new Animated.Value(1),
+    disagree: new Animated.Value(1),
+  }));
+  const [counterpointReveal] = useState(() => new Animated.Value(0));
   // Guards against a double tap reporting the same card twice.
   const isDone = useRef(false);
   const skipAnimation = useRef<Animated.CompositeAnimation | null>(null);
@@ -82,16 +92,24 @@ export function CardComponent({
   // Don't leave the skip timer running if the card unmounts mid-way.
   useEffect(() => () => skipAnimation.current?.stop(), []);
 
-  // Frank's reaction fades in shortly after the post-submit content shows.
+  // Frank's reaction fades in shortly after the post-submit content shows,
+  // and the counterpoint slides up after a short pause.
   useEffect(() => {
     if (!hasSubmitted) return;
+    Animated.timing(counterpointReveal, {
+      toValue: 1,
+      delay: COUNTERPOINT_DELAY_MS,
+      duration: COUNTERPOINT_REVEAL_MS,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
     Animated.timing(ackOpacity, {
       toValue: 1,
       delay: ACK_DELAY_MS,
       duration: ACK_FADE_MS,
       useNativeDriver: true,
     }).start();
-  }, [hasSubmitted, ackOpacity]);
+  }, [hasSubmitted, ackOpacity, counterpointReveal]);
 
   const isPerspective = card.type === 'perspective';
   const topicName =
@@ -153,7 +171,36 @@ export function CardComponent({
     ]).start(() => setHasSubmitted(true));
   };
 
+  const handleChoicePressIn = (choice: Choice) => {
+    Animated.timing(choiceScales[choice], {
+      toValue: 0.96,
+      duration: PRESS_IN_MS,
+      easing: Easing.in(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleChoicePressOut = (choice: Choice) => {
+    Animated.spring(choiceScales[choice], {
+      toValue: 1,
+      tension: 200,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
   // Animated values have to be passed as style objects.
+  const counterpointMotion = {
+    opacity: counterpointReveal,
+    transform: [
+      {
+        translateY: counterpointReveal.interpolate({
+          inputRange: [0, 1],
+          outputRange: [COUNTERPOINT_OFFSET, 0],
+        }),
+      },
+    ],
+  };
   const surfaceBorder = {
     borderColor: borderFlash.interpolate({
       inputRange: [0, 1],
@@ -197,18 +244,24 @@ export function CardComponent({
                   {(['agree', 'disagree'] as const).map((choice) => {
                     const selected = selectedChoice === choice;
                     return (
-                      <Pressable
+                      <Animated.View
                         key={choice}
-                        style={[styles.choice, selected && styles.choiceSelected]}
-                        onPress={() => setSelectedChoice(choice)}
-                        disabled={isLocked}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected, disabled: isLocked }}
+                        style={[styles.choiceWrap, { transform: [{ scale: choiceScales[choice] }] }]}
                       >
-                        <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
-                          {capitalise(choice)}
-                        </Text>
-                      </Pressable>
+                        <Pressable
+                          style={[styles.choice, selected && styles.choiceSelected]}
+                          onPress={() => setSelectedChoice(choice)}
+                          onPressIn={() => handleChoicePressIn(choice)}
+                          onPressOut={() => handleChoicePressOut(choice)}
+                          disabled={isLocked}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected, disabled: isLocked }}
+                        >
+                          <Text style={[styles.choiceText, selected && styles.choiceTextSelected]}>
+                            {capitalise(choice)}
+                          </Text>
+                        </Pressable>
+                      </Animated.View>
                     );
                   })}
                 </View>
@@ -242,10 +295,10 @@ export function CardComponent({
               {hasSubmitted ? (
                 <>
                   {isPerspective && card.counterpoint && (
-                    <View style={styles.counterpoint}>
+                    <Animated.View style={[styles.counterpoint, counterpointMotion]}>
                       <Text style={styles.counterpointLabel}>{counterpointLabel}</Text>
                       <Text style={styles.counterpointText}>{card.counterpoint}</Text>
-                    </View>
+                    </Animated.View>
                   )}
                   <Animated.Text
                     style={[styles.acknowledgement, { opacity: ackOpacity }]}
@@ -267,7 +320,7 @@ export function CardComponent({
 
       {!hasSubmitted && !isSubmitting && (
         <Pressable
-          style={styles.skip}
+          style={({ pressed }) => [styles.skip, pressed && styles.skipPressed]}
           onPress={handleSkip}
           disabled={isSkipping}
           accessibilityRole="button"
@@ -370,8 +423,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Theme.spacing.sm + Theme.spacing.xs / 2, // 10
   },
-  choice: {
+  choiceWrap: {
     flex: 1,
+  },
+  choice: {
     minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
@@ -398,6 +453,8 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 80,
+    // Scrolls inside rather than pushing the card down as the answer grows.
+    maxHeight: 120,
     borderColor: Colors.borderGrey,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
@@ -445,12 +502,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the box; parent gap is 16
   },
+  // Matches the card's width, which already sits 16 in from each screen edge.
   skip: {
-    alignSelf: 'center',
-    minHeight: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: Theme.spacing.sm + Theme.spacing.xs, // 12
-    marginTop: Theme.spacing.xs,
+    backgroundColor: 'transparent',
+    borderColor: Colors.borderGrey,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    marginTop: Theme.spacing.sm + Theme.spacing.xs, // 12
+  },
+  skipPressed: {
+    opacity: 0.6,
   },
   skipNote: {
     color: Colors.midGrey,
@@ -461,7 +525,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: Colors.midGrey,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 14,
   },
 });

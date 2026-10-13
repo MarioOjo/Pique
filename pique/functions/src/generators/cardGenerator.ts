@@ -53,6 +53,8 @@ Rules for every card you generate:
 - For perspective cards: present a clear position worth debating
 - For recall cards: explain an idea simply, then ask for reflection
 - Difficulty 1 = anyone can engage, 5 = requires real thought
+- The body (the statement) must be 180 characters or fewer
+- The prompt (the sub-prompt) must be 80 characters or fewer
 - Never generate harmful, biased or inappropriate content`;
 }
 

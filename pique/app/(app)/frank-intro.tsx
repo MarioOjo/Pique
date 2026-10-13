@@ -59,10 +59,10 @@ export default function FrankIntroScreen() {
           Meet Frank.
         </Text>
         <Text style={styles.body}>
-          Frank is the AI behind Pique. He reads what you engage with, learns what genuinely
-          interests you, and builds your feed around that.
+          Frank writes every card you see — a question, a fact, or a take worth a few seconds of
+          real thought. Your answers shape what Frank shows you next. The more honest you are, the
+          better your feed gets. There are no right or wrong answers.
         </Text>
-        <Text style={[styles.body, styles.bodyGap]}>He gets better the more honest you are.</Text>
 
         <View style={styles.divider} />
 
@@ -127,9 +127,6 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     lineHeight: 26,
-  },
-  bodyGap: {
-    marginTop: Theme.spacing.md,
   },
   divider: {
     alignSelf: 'center',

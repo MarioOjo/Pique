@@ -71,9 +71,9 @@ export default function OnboardingScreen() {
         <ProgressDots total={3} current={1} />
 
         <View style={styles.header}>
-          <Text style={styles.heading}>What are you into?</Text>
+          <Text style={styles.heading}>What do you want to think about?</Text>
           <Text style={styles.subheading}>
-            Pick at least 3 topics. Frank will build your feed around them.
+            Pick at least 3.
           </Text>
         </View>
 
