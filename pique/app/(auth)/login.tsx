@@ -56,7 +56,7 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         placeholder="Your password"
-        secureTextEntry
+        password
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"
