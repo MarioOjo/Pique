@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
@@ -13,6 +13,7 @@ import { getAuthErrorMessage } from '@/lib/authErrors';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -56,36 +57,68 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         placeholder="Your password"
-        secureTextEntry
+        password
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"
         onSubmitEditing={handleSignIn}
       />
 
-      <View style={styles.forgotRow}>
-        <Text style={styles.forgot}>Forgot password?</Text>
-      </View>
+      <Pressable
+        style={({ pressed }) => [styles.forgot, pressed && styles.forgotPressed]}
+        onPress={() => router.push('/forgot-password')}
+        hitSlop={FORGOT_HIT_SLOP}
+        accessibilityRole="link"
+      >
+        <Text style={styles.forgotText}>Forgot password?</Text>
+      </Pressable>
 
       {error && <Text style={authStyles.error}>{error}</Text>}
 
       <Button title="Sign in" onPress={handleSignIn} loading={submitting} />
 
-      <View style={authStyles.footer}>
-        <Text style={authStyles.footerText}>New to Pique? </Text>
-        <Link href="/register" replace>
-          <Text style={authStyles.link}>Create an account</Text>
-        </Link>
+      <View style={styles.divider} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
       </View>
+
+      <Button
+        title="Create account"
+        variant="outline"
+        onPress={() => router.replace('/register')}
+      />
     </FormScreen>
   );
 }
 
+// The text is about 20pt tall; this extends its touch area to 44pt.
+const FORGOT_HIT_SLOP = 12;
+
 const styles = StyleSheet.create({
-  forgotRow: {
-    alignItems: 'flex-end',
-  },
   forgot: {
+    alignSelf: 'flex-end',
+    marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the field
+  },
+  forgotPressed: {
+    opacity: 0.6,
+  },
+  forgotText: {
+    color: Colors.violet,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm + Theme.spacing.xs,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.borderGrey,
+  },
+  dividerText: {
     color: Colors.midGrey,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,

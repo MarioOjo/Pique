@@ -33,7 +33,7 @@ export function Button({
         styles.button,
         outline && styles.outline,
         accent && styles.accent,
-        pressed && styles.pressed,
+        pressed && (outline ? styles.outlinePressed : styles.pressed),
         disabled && !loading && styles.disabled,
         loading && styles.loading,
       ]}
@@ -60,6 +60,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderColor: Colors.navy,
     borderWidth: 1.5,
+    borderRadius: Theme.borderRadius.lg,
+    // Without padding, minHeight sets it to exactly 56 including the border.
+    paddingVertical: 0,
+  },
+  // No fill to darken, so the press shows as a stronger fade.
+  outlinePressed: {
+    opacity: 0.6,
   },
   accent: {
     backgroundColor: Colors.amber,
