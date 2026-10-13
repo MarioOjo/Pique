@@ -267,7 +267,7 @@ export function CardComponent({
 
       {!hasSubmitted && !isSubmitting && (
         <Pressable
-          style={styles.skip}
+          style={({ pressed }) => [styles.skip, pressed && styles.skipPressed]}
           onPress={handleSkip}
           disabled={isSkipping}
           accessibilityRole="button"
@@ -445,12 +445,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the box; parent gap is 16
   },
+  // Matches the card's width, which already sits 16 in from each screen edge.
   skip: {
-    alignSelf: 'center',
-    minHeight: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
     justifyContent: 'center',
-    padding: Theme.spacing.sm + Theme.spacing.xs, // 12
-    marginTop: Theme.spacing.xs,
+    backgroundColor: 'transparent',
+    borderColor: Colors.borderGrey,
+    borderWidth: 1.5,
+    borderRadius: 14,
+    marginTop: Theme.spacing.sm + Theme.spacing.xs, // 12
+  },
+  skipPressed: {
+    opacity: 0.6,
   },
   skipNote: {
     color: Colors.midGrey,
@@ -461,7 +468,7 @@ const styles = StyleSheet.create({
   },
   skipText: {
     color: Colors.midGrey,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 14,
   },
 });
