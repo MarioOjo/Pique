@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
@@ -77,12 +77,17 @@ export default function LoginScreen() {
 
       <Button title="Sign in" onPress={handleSignIn} loading={submitting} />
 
-      <View style={authStyles.footer}>
-        <Text style={authStyles.footerText}>New to Pique? </Text>
-        <Link href="/register" replace>
-          <Text style={authStyles.link}>Create an account</Text>
-        </Link>
+      <View style={styles.divider} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
       </View>
+
+      <Button
+        title="Create account"
+        variant="outline"
+        onPress={() => router.replace('/register')}
+      />
     </FormScreen>
   );
 }
@@ -100,6 +105,21 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     color: Colors.violet,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm + Theme.spacing.xs,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.borderGrey,
+  },
+  dividerText: {
+    color: Colors.midGrey,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
