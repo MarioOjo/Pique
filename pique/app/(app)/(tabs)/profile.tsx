@@ -7,17 +7,20 @@ import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { useStats } from '@/hooks/useStats';
+import { useRecentTakes, type RecentTake } from '@/hooks/useRecentTakes';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { INTERESTS } from '@/lib/seedInterests';
 
 const TOP_TOPIC_COUNT = 3;
-// Interest weights are capped at this by scoreResponse.
-const MAX_WEIGHT = 3.0;
 const MIN_TOUCH_TARGET = 44;
 
-function interestLabel(interestId: string): string {
-  const interest = INTERESTS.find((item) => item.id === interestId);
-  return interest ? `${interest.emoji}  ${interest.name}` : interestId;
+function interestName(interestId: string): string {
+  return INTERESTS.find((item) => item.id === interestId)?.name ?? interestId;
+}
+
+function takeAction(take: RecentTake): string {
+  if (take.cardType === 'recall') return 'Wrote';
+  return take.responseText === 'agree' ? 'Agreed' : 'Disagreed';
 }
 
 export default function ProfileScreen() {
@@ -25,6 +28,9 @@ export default function ProfileScreen() {
   const { user, piqueUser } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
   const { interests, loading: interestsLoading } = useTopInterests(user?.uid, TOP_TOPIC_COUNT);
+  const { takes, loading: takesLoading } = useRecentTakes(user?.uid);
+  // Bars and percentages are relative to the strongest topic.
+  const topWeight = interests[0]?.weight ?? 1;
 
   const name = piqueUser?.name?.trim() || 'Pique user';
   const email = piqueUser?.email ?? user?.email ?? '';
@@ -91,17 +97,23 @@ export default function ProfileScreen() {
           ) : interests.length === 0 ? (
             <Text style={styles.empty}>No topics yet.</Text>
           ) : (
-            interests.map((interest) => {
-              const percent = Math.min(100, (interest.weight / MAX_WEIGHT) * 100);
+            interests.map((interest, index) => {
+              const rank = index + 1;
+              const percent = Math.round(Math.min(100, (interest.weight / topWeight) * 100));
+              const strength = rank === 1 ? 'Strongest' : `${percent}%`;
+              const name = interestName(interest.interestId);
               return (
                 <View
                   key={interest.interestId}
                   style={styles.topic}
-                  accessibilityLabel={`${interestLabel(interest.interestId)}, weight ${interest.weight.toFixed(1)} of ${MAX_WEIGHT}`}
+                  accessibilityLabel={`Number ${rank}, ${name}, ${strength}`}
                 >
                   <View style={styles.topicHeader}>
-                    <Text style={styles.topicName}>{interestLabel(interest.interestId)}</Text>
-                    <Text style={styles.topicWeight}>{interest.weight.toFixed(1)}</Text>
+                    <Text style={styles.topicRank}>{rank}</Text>
+                    <Text style={styles.topicName} numberOfLines={1}>
+                      {name}
+                    </Text>
+                    <Text style={styles.topicStrength}>{strength}</Text>
                   </View>
                   <View style={styles.barTrack}>
                     {/* Width depends on data, so it can't live in the StyleSheet. */}
@@ -110,6 +122,31 @@ export default function ProfileScreen() {
                 </View>
               );
             })
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Recent takes</Text>
+          {takesLoading ? (
+            <ActivityIndicator color={Colors.violet} />
+          ) : takes.length === 0 ? (
+            <Text style={styles.takesEmpty}>Your responses will appear here.</Text>
+          ) : (
+            <View style={styles.takes}>
+              {takes.map((take, index) => (
+                <View key={take.id}>
+                  {index > 0 && <View style={styles.takeDivider} />}
+                  <View style={styles.take}>
+                    <Text style={styles.takeAction}>
+                      {takeAction(take)} · {interestName(take.interestId)}
+                    </Text>
+                    <Text style={styles.takeBody} numberOfLines={2}>
+                      {take.body}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -217,31 +254,69 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   topic: {
-    gap: Theme.spacing.xs + Theme.spacing.xs / 2,
+    gap: Theme.spacing.sm,
   },
   topicHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  topicRank: {
+    width: 20,
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.sm,
   },
   topicName: {
+    flex: 1,
     color: Colors.navy,
     fontFamily: Theme.fontFamily.semiBold,
-    fontSize: 14,
+    fontSize: 15,
   },
-  topicWeight: {
+  topicStrength: {
     color: Colors.midGrey,
     fontFamily: Theme.fontFamily.regular,
-    fontSize: 12,
+    fontSize: Theme.fontSize.sm,
   },
   barTrack: {
-    height: Theme.spacing.sm,
+    height: Theme.spacing.xs,
     backgroundColor: Colors.borderGrey,
-    borderRadius: Theme.borderRadius.full,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     backgroundColor: Colors.violet,
-    borderRadius: Theme.borderRadius.full,
+    borderRadius: 2,
+  },
+  takesEmpty: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  // One card for the whole list, with dividers between the takes.
+  takes: {
+    backgroundColor: Colors.white,
+    borderRadius: Theme.borderRadius.md,
+    paddingHorizontal: Theme.spacing.md,
+  },
+  take: {
+    paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
+    gap: Theme.spacing.xs,
+  },
+  takeDivider: {
+    height: 1,
+    backgroundColor: Colors.borderGrey,
+  },
+  takeAction: {
+    color: Colors.violet,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.sm,
+  },
+  takeBody: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

@@ -7,7 +7,7 @@ import { db } from '@/lib/firebase';
 import { MOCK_CARDS } from '@/lib/mockCards';
 import type { Card, UserInterest } from '@/types';
 
-const SESSION_SIZE = 10;
+export const SESSION_SIZE = 10;
 
 interface UseCardsResult {
   currentCard: Card | null;

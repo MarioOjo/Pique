@@ -15,6 +15,7 @@ interface CardComponentProps {
 }
 
 type Choice = 'agree' | 'disagree';
+type ViewShift = 'yes' | 'no';
 
 const MIN_RECALL_LENGTH = 20;
 const MIN_TOUCH_TARGET = 44;
@@ -35,6 +36,17 @@ const ACKNOWLEDGEMENTS = [
   'Frank’s listening.',
 ] as const;
 
+// Optional follow-up on perspective cards, after the counterpoint.
+const VIEW_SHIFT_OPTIONS = [
+  { value: 'yes', label: 'Yes, a little' },
+  { value: 'no', label: 'Not really' },
+] as const;
+
+const VIEW_SHIFT_FEEDBACK: Record<ViewShift, string> = {
+  yes: 'Noted — Frank will keep the angles coming.',
+  no: 'Fair enough — Frank will mix it up next time.',
+};
+
 const PULSE_MS = 200; // Submit button 1 → 0.95 → 1
 const FLASH_MS = 150; // card border grey → violet → grey
 const ACK_DELAY_MS = 500; // once the counterpoint has settled
@@ -45,6 +57,8 @@ const PRESS_IN_MS = 120; // Agree/Disagree shrink to 0.96 on press-in
 const COUNTERPOINT_DELAY_MS = 200;
 const COUNTERPOINT_REVEAL_MS = 300;
 const COUNTERPOINT_OFFSET = 8; // slides up this far as it fades in
+const VIEW_SHIFT_DELAY_MS = ACK_DELAY_MS + ACK_FADE_MS; // after Frank's line
+const VIEW_SHIFT_FADE_MS = 200;
 
 function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -85,6 +99,8 @@ export function CardComponent({
     disagree: new Animated.Value(1),
   }));
   const [counterpointReveal] = useState(() => new Animated.Value(0));
+  const [viewShift, setViewShift] = useState<ViewShift | null>(null);
+  const [viewShiftOpacity] = useState(() => new Animated.Value(0));
   // Guards against a double tap reporting the same card twice.
   const isDone = useRef(false);
   const skipAnimation = useRef<Animated.CompositeAnimation | null>(null);
@@ -92,8 +108,8 @@ export function CardComponent({
   // Don't leave the skip timer running if the card unmounts mid-way.
   useEffect(() => () => skipAnimation.current?.stop(), []);
 
-  // Frank's reaction fades in shortly after the post-submit content shows,
-  // and the counterpoint slides up after a short pause.
+  // After submitting: the counterpoint slides up after a short pause, then
+  // Frank's reaction fades in, then the "shift your view?" follow-up.
   useEffect(() => {
     if (!hasSubmitted) return;
     Animated.timing(counterpointReveal, {
@@ -109,7 +125,13 @@ export function CardComponent({
       duration: ACK_FADE_MS,
       useNativeDriver: true,
     }).start();
-  }, [hasSubmitted, ackOpacity, counterpointReveal]);
+    Animated.timing(viewShiftOpacity, {
+      toValue: 1,
+      delay: VIEW_SHIFT_DELAY_MS,
+      duration: VIEW_SHIFT_FADE_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [hasSubmitted, ackOpacity, counterpointReveal, viewShiftOpacity]);
 
   const isPerspective = card.type === 'perspective';
   const topicName =
@@ -306,6 +328,34 @@ export function CardComponent({
                   >
                     {acknowledgement}
                   </Animated.Text>
+                  {isPerspective && card.counterpoint && (
+                    <Animated.View style={[styles.viewShift, { opacity: viewShiftOpacity }]}>
+                      <Text style={styles.viewShiftQuestion}>Did that shift your view?</Text>
+                      <View style={styles.viewShiftOptions} accessibilityRole="radiogroup">
+                        {VIEW_SHIFT_OPTIONS.map((option) => {
+                          const selected = viewShift === option.value;
+                          return (
+                            <Pressable
+                              key={option.value}
+                              style={[styles.pill, selected && styles.pillSelected]}
+                              onPress={() => setViewShift(option.value)}
+                              accessibilityRole="radio"
+                              accessibilityState={{ selected }}
+                            >
+                              <Text style={[styles.pillText, selected && styles.pillTextSelected]}>
+                                {option.label}
+                              </Text>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                      {viewShift && (
+                        <Text style={styles.viewShiftFeedback} accessibilityLiveRegion="polite">
+                          {VIEW_SHIFT_FEEDBACK[viewShift]}
+                        </Text>
+                      )}
+                    </Animated.View>
+                  )}
                   <Button title="Next card →" onPress={handleNext} />
                 </>
               ) : (
@@ -503,6 +553,46 @@ const styles = StyleSheet.create({
     marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the box; parent gap is 16
   },
   // Matches the card's width, which already sits 16 in from each screen edge.
+  viewShift: {
+    marginTop: Theme.spacing.xs, // 20 below Frank's line; parent gap is 16
+  },
+  viewShiftQuestion: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 15,
+    marginBottom: Theme.spacing.sm + Theme.spacing.xs,
+  },
+  viewShiftOptions: {
+    flexDirection: 'row',
+    gap: Theme.spacing.sm + Theme.spacing.xs / 2, // 10
+  },
+  pill: {
+    flex: 1,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderColor: Colors.borderGrey,
+    borderWidth: 1.5,
+    borderRadius: Theme.borderRadius.full,
+  },
+  pillSelected: {
+    backgroundColor: Colors.navy,
+  },
+  pillText: {
+    color: Colors.navy,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 14,
+  },
+  pillTextSelected: {
+    color: Colors.white,
+  },
+  viewShiftFeedback: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    marginTop: Theme.spacing.sm,
+  },
   skip: {
     height: MIN_TOUCH_TARGET,
     alignItems: 'center',
