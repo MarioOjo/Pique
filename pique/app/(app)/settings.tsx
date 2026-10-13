@@ -2,10 +2,12 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  LayoutAnimation,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -20,6 +22,7 @@ import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { SESSION_SIZE } from '@/hooks/useCards';
+import { REMINDER_TIMES, useReminderPrefs } from '@/hooks/useReminderPrefs';
 import { useStats } from '@/hooks/useStats';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { AVATAR_PRESETS } from '@/lib/avatars';
@@ -37,6 +40,7 @@ export default function SettingsScreen() {
   const { stats, loading: statsLoading } = useStats(user?.uid);
   const { interests, loading: interestsLoading } = useTopInterests(user?.uid, ALL_INTERESTS);
 
+  const reminder = useReminderPrefs();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [savingAvatarId, setSavingAvatarId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
@@ -96,6 +100,12 @@ export default function SettingsScreen() {
     } finally {
       setSavingName(false);
     }
+  };
+
+  const toggleReminder = (value: boolean) => {
+    // Animates the time row in or out.
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    reminder.setEnabled(value);
   };
 
   const handleSignOut = async () => {
@@ -279,6 +289,52 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* REMINDERS */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>REMINDERS</Text>
+            <View style={styles.row}>
+              <View style={styles.rowText}>
+                <Text style={styles.rowLabel}>Daily reminder</Text>
+                <Text style={styles.rowSubtitle}>Keeps your streak alive · coming soon</Text>
+              </View>
+              <Switch
+                value={reminder.enabled}
+                onValueChange={toggleReminder}
+                trackColor={{ false: Colors.borderGrey, true: Colors.violet }}
+                thumbColor={Colors.white}
+                ios_backgroundColor={Colors.borderGrey}
+                accessibilityLabel="Daily reminder"
+              />
+            </View>
+            {reminder.enabled && (
+              <>
+                <View style={styles.divider} />
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Time</Text>
+                  <View style={styles.timeOptions} accessibilityRole="radiogroup">
+                    {REMINDER_TIMES.map((time) => {
+                      const selected = reminder.time === time;
+                      return (
+                        <Pressable
+                          key={time}
+                          style={[styles.timePill, selected && styles.timePillSelected]}
+                          onPress={() => reminder.setTime(time)}
+                          hitSlop={TIME_PILL_HIT_SLOP}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text style={[styles.timeText, selected && styles.timeTextSelected]}>
+                            {time}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+
           {/* ACCOUNT */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>ACCOUNT</Text>
@@ -323,6 +379,8 @@ export default function SettingsScreen() {
 }
 
 const SWATCH = 56;
+// Pills are 32pt tall; this extends their touch area to 44pt.
+const TIME_PILL_HIT_SLOP = { top: 6, bottom: 6 };
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -439,6 +497,38 @@ const styles = StyleSheet.create({
     color: Colors.navy,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 15,
+  },
+  rowText: {
+    flexShrink: 1,
+    gap: Theme.spacing.xs / 2,
+  },
+  rowSubtitle: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 12,
+  },
+  timeOptions: {
+    flexDirection: 'row',
+    gap: Theme.spacing.xs + Theme.spacing.xs / 2, // 6
+  },
+  timePill: {
+    height: Theme.spacing.xl, // 32
+    paddingHorizontal: Theme.spacing.sm + Theme.spacing.xs,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Colors.lightGrey,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timePillSelected: {
+    backgroundColor: Colors.violet,
+  },
+  timeText: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.sm,
+  },
+  timeTextSelected: {
+    color: Colors.white,
   },
   rowValueGroup: {
     flexShrink: 1,
