@@ -39,7 +39,8 @@ export function TextField({ label, password = false, ...inputProps }: TextFieldP
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
           >
             <Ionicons
-              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              // Shows the current state: slashed while hidden, open while visible.
+              name={showPassword ? 'eye-outline' : 'eye-off-outline'}
               size={EYE_ICON}
               color={Colors.midGrey}
             />
