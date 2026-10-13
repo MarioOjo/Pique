@@ -7,14 +7,18 @@ import {GeneratedCard} from "../types";
 // Interest display names for prompts. Keep in sync with INTERESTS in the
 // app's lib/seedInterests.ts.
 export const INTEREST_NAMES: Record<string, string> = {
-  philosophy: "Philosophy",
-  science: "Science",
-  technology: "Technology",
-  culture: "Culture",
-  psychology: "Psychology",
-  economics: "Economics",
-  art: "Art",
-  politics: "Politics",
+  "philosophy": "Philosophy",
+  "science": "Science",
+  "technology": "Technology",
+  "culture": "Culture",
+  "psychology": "Psychology",
+  "economics": "Economics",
+  "art": "Art",
+  "politics": "Politics",
+  "pop-culture": "Pop Culture",
+  "gaming": "Gaming",
+  "food": "Food",
+  "history": "History",
 };
 
 // Structured outputs constrain Claude's reply to this schema, so the
