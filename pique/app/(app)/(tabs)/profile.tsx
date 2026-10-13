@@ -1,5 +1,7 @@
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
@@ -11,6 +13,7 @@ import { INTERESTS } from '@/lib/seedInterests';
 const TOP_TOPIC_COUNT = 3;
 // Interest weights are capped at this by scoreResponse.
 const MAX_WEIGHT = 3.0;
+const MIN_TOUCH_TARGET = 44;
 
 function interestLabel(interestId: string): string {
   const interest = INTERESTS.find((item) => item.id === interestId);
@@ -18,6 +21,7 @@ function interestLabel(interestId: string): string {
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user, piqueUser } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
   const { interests, loading: interestsLoading } = useTopInterests(user?.uid, TOP_TOPIC_COUNT);
@@ -28,7 +32,19 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView edges={['top']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.header}>Profile</Text>
+        <View style={styles.headerRow}>
+          <Text style={styles.header} accessibilityRole="header">
+            Profile
+          </Text>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={22} color={Colors.navy} />
+          </Pressable>
+        </View>
 
         <View style={styles.identity}>
           <Avatar name={name} avatarId={piqueUser?.avatarId} />
@@ -110,6 +126,21 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     padding: Theme.spacing.lg,
     gap: Theme.spacing.lg,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    // Keeps the title aligned with the content while the icon's 44pt
+    // touch area extends into the padding.
+    marginVertical: -Theme.spacing.sm,
+    marginRight: -Theme.spacing.sm - Theme.spacing.xs,
+  },
+  iconButton: {
+    width: MIN_TOUCH_TARGET,
+    height: MIN_TOUCH_TARGET,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     color: Colors.navy,
