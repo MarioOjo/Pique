@@ -398,6 +398,8 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 80,
+    // Scrolls inside rather than pushing the card down as the answer grows.
+    maxHeight: 120,
     borderColor: Colors.borderGrey,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
