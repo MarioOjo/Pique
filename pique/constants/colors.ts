@@ -14,6 +14,8 @@ export const Colors = {
   scrim: 'rgba(0, 0, 0, 0.5)',
   // Destructive actions such as signing out.
   danger: '#DC2626',
+  // Confirmation messages, such as a sent reset link.
+  success: '#38A169',
   // Avatar preset backgrounds.
   avatarTeal: '#14B8A6',
   avatarCoral: '#F97362',

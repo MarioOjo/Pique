@@ -20,11 +20,15 @@ function RootNavigator() {
     const onFrankIntro = pathname === '/frank-intro';
     const onOnboarding = pathname === '/onboarding';
     const inMainApp = segments[0] === '(app)' && !onOnboarding && !onFrankIntro;
+    // Opened from login and from Settings, so it's allowed signed in or out.
+    const onForgotPassword = pathname === '/forgot-password';
 
     // Every step uses replace, so back never returns to a finished step.
     // The intro only applies before onboarding: users who onboarded before
     // it existed (no frankIntroSeen field) go straight to the feed.
-    if (!user) {
+    if (onForgotPassword) {
+      // Leave the user where they are.
+    } else if (!user) {
       if (!inAuthGroup) router.replace('/login');
     } else if (!piqueUser?.onboardingComplete && !piqueUser?.frankIntroSeen) {
       if (!onFrankIntro) router.replace('/frank-intro');

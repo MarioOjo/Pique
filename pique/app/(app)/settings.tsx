@@ -267,6 +267,15 @@ export default function SettingsScreen() {
             <Text style={styles.sectionLabel}>ACCOUNT</Text>
             <Pressable
               style={styles.row}
+              onPress={() => router.push('/forgot-password')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.rowLabel}>Reset password</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.midGrey} />
+            </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              style={styles.row}
               onPress={handleSignOut}
               disabled={signingOut}
               accessibilityRole="button"
