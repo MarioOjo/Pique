@@ -19,6 +19,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
+import { SESSION_SIZE } from '@/hooks/useCards';
 import { useStats } from '@/hooks/useStats';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { AVATAR_PRESETS } from '@/lib/avatars';
@@ -262,6 +263,22 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* FEED */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>FEED</Text>
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Topics following</Text>
+              <Text style={[styles.rowValue, styles.rowValueMuted]}>
+                {interestsLoading ? '–' : interests.length}
+              </Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <Text style={styles.rowLabel}>Cards per session</Text>
+              <Text style={[styles.rowValue, styles.rowValueMuted]}>{SESSION_SIZE}</Text>
+            </View>
+          </View>
+
           {/* ACCOUNT */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>ACCOUNT</Text>
@@ -292,11 +309,6 @@ export default function SettingsScreen() {
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Version</Text>
               <Text style={styles.rowValue}>{APP_VERSION}</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Topics following</Text>
-              <Text style={styles.rowValue}>{interestsLoading ? '–' : interests.length}</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.row}>
