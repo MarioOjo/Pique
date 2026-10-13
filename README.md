@@ -1,2 +1,402 @@
 # Pique
 
+![React Native](https://img.shields.io/badge/React_Native-0.86-61DAFB?logo=react&logoColor=white)
+![Expo](https://img.shields.io/badge/Expo-SDK_57-000020?logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth_%7C_Firestore_%7C_Functions-FFCA28?logo=firebase&logoColor=black)
+![Claude API](https://img.shields.io/badge/Claude_API-claude--sonnet--4--5-D97757?logo=anthropic&logoColor=white)
+
+**Scroll less. Think more.**
+
+Pique is a mobile app that replaces mindless scrolling with short, AI-generated cards that ask something of you. Each card is a bold statement to agree or disagree with, or an idea to reflect on in your own words, and you can't move on until you've responded. A session is ten cards long, and then it ends. There's no infinite feed and no autoplay. You come away having thought about ten things instead of having skimmed past two hundred.
+
+Pique was built by Mario Ojo (241334) for Interactive Development 300 (DV300), Theme 4, at Open Window Institute.
+
+---
+
+## The problem
+
+Many of us spend more than two hours a day on social media (Statista, 2022). Much of that time is spent scrolling passively, a habit research has linked to lower wellbeing (Verduyn et al., 2021), although the effects vary a great deal from person to person (Valkenburg et al., 2022). The usual fix is a "digital detox", and quitting cold has shown mixed results (Radtke et al., 2022; Coyne & Woodruff, 2023), partly because it takes away the habit without replacing it with anything. Pique doesn't ask you to stop picking up your phone. It changes what happens when you do.
+
+## Meet Frank
+
+Frank is the mind behind every card in Pique.
+
+Tell Frank what you're into (philosophy, science, art, politics and more) and he writes you a fresh set of cards every session: sharp claims worth arguing with, and clear explanations of ideas worth sitting with. He doesn't just count taps. When you answer, Frank reads what you wrote and judges how much thought went into it. The topics you really engage with show up more often, and the ones you skip fade into the background.
+
+Frank is built on Anthropic's Claude. He isn't trying to keep you on the app as long as possible. He's trying to make the time you spend on it worth something.
+
+---
+
+## Features
+
+### Implemented
+
+- **Email and password accounts.** Sign up, sign in and stay signed in between sessions.
+- **Meet Frank.** A one-time intro screen, shown before onboarding, explaining who Frank is and how Pique works.
+- **Onboarding.** Pick at least three of twelve topics to shape your first feed.
+- **Ten-card sessions.** A finite feed with a progress bar and a clear end.
+- **Two card types:**
+  - **Perspective.** A debatable claim. Choose *Agree* or *Disagree*, then Frank shows you the other side.
+  - **Recall.** An idea explained simply. Write a response of at least 20 characters.
+- **Response gate.** You can't advance without responding or deliberately skipping.
+- **Live AI card generation.** Frank writes each session's cards with the Claude API, spread across your top three topics.
+- **Background response scoring.** Every response is scored 1–10 for genuine engagement, and you never wait for it.
+- **Adaptive feed.** Engagement scores raise or lower each topic's weight, which decides what Frank writes next.
+- **Streaks and stats.** Daily streaks (counted from your local midnight) and total cards completed.
+- **Profile.** Your avatar, streak, total responses and top three topics, each with a weight bar.
+- **Settings.** Reached from the gear icon on the feed and profile headers. Choose one of eight preset avatars, edit your display name, see your email, the app version, how many topics you follow and how many cards you've completed, and sign out.
+- **Graceful fallback.** If Frank is unavailable, the session carries on with clearly labelled sample cards.
+- **Micro-feedback.** Submitting a response makes the button pulse and the card border flash violet. Skipping shows "Skipped — Frank noticed." before the next card.
+- **Frank's voice.** The counterpoint is introduced in one of several lines from Frank, and a short acknowledgement fades in after each response.
+- **Session summary.** Each session ends with cards completed, topics explored, your best streak and a note from Frank.
+
+### Navigation
+
+New users go **Register → Meet Frank → pick topics → Feed**. The root layout sends each user to the right step based on `frankIntroSeen` and `onboardingComplete`, using `router.replace` so the back button can't return to a finished step.
+
+Once onboarded, the app has two tabs, **Feed** and **Profile**. Settings, the Frank intro and onboarding are full-screen stack screens outside the tab bar, so Settings slides in over the tabs and the back gesture returns you to where you were.
+
+### Roadmap
+
+These are designed but not yet built:
+
+- Accountability buddies (a `BuddyConnection` type is already defined)
+- Admin panel for content moderation (the card model already supports a `flagged` status)
+- Topic-matched photography via the Unsplash API
+
+---
+
+## Tech stack
+
+| Layer | Technology | Reason |
+| --- | --- | --- |
+| Mobile app | React Native 0.86 + Expo SDK 57 | One TypeScript codebase for iOS and Android, with Expo Go for fast on-device testing |
+| Language | TypeScript (strict) | Shared, checked types between screens, hooks and Cloud Functions |
+| Navigation | expo-router | File-based routes: separate auth and app groups, with a stack around the Feed and Profile tabs |
+| Authentication | Firebase Authentication | Email and password sign-in, kept between sessions with AsyncStorage |
+| Database | Cloud Firestore | Real-time listeners keep stats and topic weights live, and Security Rules protect each user's data |
+| Server logic | Firebase Cloud Functions (Node.js 24) | Keeps the Claude API key off the device and runs scoring and stats on the server |
+| AI | Claude API (`claude-sonnet-4-5`) via `@anthropic-ai/sdk` | Generates cards and scores responses, with structured outputs that return checked JSON |
+| Validation | Zod | Defines the exact shape Claude must return |
+| Typography | Poppins (Regular 400, SemiBold 600) | A friendly geometric typeface used across the whole app |
+| Graphics | react-native-svg | Draws the Pique logo mark, the "P" and Frank's amber sparkle, crisply at any size |
+| Local development | Firebase Emulator Suite | Auth, Firestore and Functions all run locally, without touching production |
+
+**Brand colours:**
+
+| Colour | Hex | Used for |
+| --- | --- | --- |
+| Navy | `#1C1040` | Headers, primary buttons, body text |
+| Violet | `#7B5CF0` | Frank, accents, progress and selection |
+| Amber | `#F0B429` | Streaks |
+| Light grey | `#F5F5F7` | Screen backgrounds |
+
+---
+
+## Getting started
+
+### Prerequisites
+
+- **Node.js 22 or later.** The Cloud Functions target Node.js 24, so use 24 to match production. Node 22 works locally, but the emulator will print a version warning.
+- **Java 21 or later.** Needed by the Firestore emulator.
+- **The Expo Go app** on your phone, or an Android emulator or iOS simulator. You don't need a global Expo CLI install, because `npx expo` uses the project's own copy.
+- **A Firebase project.** Production deploys need the Blaze (pay-as-you-go) plan. Local development with emulators doesn't.
+- **An Anthropic API account** with credits, for Frank.
+
+### Installation
+
+**1. Clone the repository and install dependencies.**
+
+```bash
+git clone https://github.com/MarioOjo/Pique.git
+cd Pique/pique
+npm install
+cd functions && npm install && cd ..
+```
+
+Everything below is run from the `pique/` folder.
+
+**2. Register a Firebase web app.**
+
+In the [Firebase console](https://console.firebase.google.com), open your project, go to **Project settings → Your apps → Add app → Web**, and copy the config values into `pique/.env` (see [Environment variables](#environment-variables)). Then point the Firebase CLI at your project:
+
+```bash
+npx firebase-tools login
+npx firebase-tools use --add   # choose your project and give it the alias "default"
+```
+
+The app's `EXPO_PUBLIC_FIREBASE_PROJECT_ID` must match this project, or the app and the emulators will be looking at different data.
+
+**3. Enable sign-in.**
+
+In the console, go to **Authentication → Sign-in method** and enable **Email/Password**.
+
+**4. Add your Anthropic API key for local development.**
+
+Create `pique/functions/.secret.local`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+This file is git-ignored. The Functions emulator reads it in place of the production secret.
+
+**5. Start the emulators and the app.** These run in two terminals; see [Running with emulators](#running-with-emulators). Then scan the QR code with Expo Go, register an account, pick three topics and start your first session.
+
+### Environment variables
+
+Expo variables live in `pique/.env`, which is git-ignored. The `EXPO_PUBLIC_` prefix means they are included in the app bundle, so this file only holds Firebase's public web config.
+
+| Key | Description |
+| --- | --- |
+| `EXPO_PUBLIC_FIREBASE_API_KEY` | Firebase web API key (identifies the project; it isn't a secret) |
+| `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN` | Usually `<project-id>.firebaseapp.com` |
+| `EXPO_PUBLIC_FIREBASE_PROJECT_ID` | Your Firebase project ID |
+| `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET` | Usually `<project-id>.firebasestorage.app` |
+| `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Your project number |
+| `EXPO_PUBLIC_FIREBASE_APP_ID` | The web app ID (`1:…:web:…`) |
+| `EXPO_PUBLIC_USE_EMULATORS` | Optional. Set to `false` to make development builds use the real Firebase project instead of the local emulators. |
+
+> **The Anthropic API key never goes in `.env`.** Anything in `.env` ends up in the app bundle. Locally, the key lives in `functions/.secret.local`. In production, it's a Firebase secret:
+>
+> ```bash
+> npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY
+> ```
+
+### Running with emulators
+
+In development builds (`__DEV__`), the app connects to the Firebase Emulator Suite automatically: Auth on port 9099, Firestore on 8080 and Functions on 5001. It uses your computer's LAN address, taken from Expo, so a physical phone on the same Wi-Fi can reach them.
+
+**Terminal 1: emulators.**
+
+```bash
+cd pique
+npx firebase-tools emulators:start --import=./emulator-data --export-on-exit
+```
+
+Wait for `All emulators ready` and check that the Functions line lists `generateCards, scoreResponse, updateStats`. Stop the emulators with **Ctrl+C**: the `--export-on-exit` flag saves your data to `emulator-data/` (git-ignored) when they shut down, and `--import` loads it back next time. On the very first run there's nothing to import yet, which is fine. The Emulator UI is at <http://127.0.0.1:4000>.
+
+**Terminal 2: the app.**
+
+```bash
+cd pique
+npx expo start
+```
+
+The Metro log should show `[firebase] Using local emulators at <your IP>`.
+
+If the app shows old code after switching branches or pulling changes, restart Metro with its cache cleared:
+
+```bash
+npx expo start -c
+```
+
+**Troubleshooting:**
+
+- **Physical device can't connect.** Allow Node.js and Java through Windows Firewall on private networks.
+- **`Timeout after 10000` loading functions.** A slow first load, common on synced folders such as OneDrive. Raise the limit with `FUNCTIONS_DISCOVERY_TIMEOUT=60` (in seconds) before starting the emulators.
+- **Feed shows "sample cards".** Card generation failed. Check the emulator terminal; the usual causes are a missing key in `.secret.local`, an Anthropic account with no credits, or the daily card limit.
+
+### Deploying
+
+```bash
+cd pique
+npx firebase-tools deploy --only functions,firestore:rules
+```
+
+Deploying runs the functions' lint and build steps first. The rules in `firestore.rules` must be deployed for the protections described under [Security](#security) to apply.
+
+---
+
+## Project structure
+
+```
+pique/
+├── app/                        # Screens (expo-router: every file is a route)
+│   ├── _layout.tsx             # Root: fonts, splash screen, AuthProvider, auth redirects
+│   ├── index.tsx               # Empty entry route; the root layout redirects from here
+│   ├── (auth)/                 # Signed-out screens
+│   │   ├── login.tsx
+│   │   └── register.tsx
+│   └── (app)/                  # Signed-in screens
+│       ├── _layout.tsx         # Stack: the tabs plus full-screen screens
+│       ├── (tabs)/
+│       │   ├── _layout.tsx     # Feed and Profile tabs
+│       │   ├── feed.tsx        # Ten-card session and progress
+│       │   └── profile.tsx     # Avatar, streak, totals, top topics
+│       ├── frank-intro.tsx     # One-time "Meet Frank" intro, before onboarding
+│       ├── onboarding.tsx      # Topic selection (at least 3 of 12)
+│       └── settings.tsx        # Avatar, name, account details, sign out
+├── components/
+│   ├── cards/CardComponent.tsx # Perspective and Recall cards, response gate, timing, feedback
+│   ├── feed/SessionComplete.tsx # End-of-session summary and Frank's note
+│   └── ui/                     # Button, TextField, Avatar, InterestChip, WelcomeBanner, PiqueMark (SVG logo)…
+├── hooks/
+│   ├── useAuth.tsx             # Auth context and live user profile
+│   ├── useCards.tsx            # Session queue, generation, recording and background scoring
+│   ├── useStats.tsx            # Live stats/{uid}
+│   └── useTopInterests.tsx     # Live interest weights, highest first
+├── lib/
+│   ├── firebase.ts             # Firebase app, auth (persisted), Firestore, Functions, emulators
+│   ├── claude.ts               # Typed wrappers for Frank's Cloud Functions
+│   ├── seedInterests.ts        # The twelve topics
+│   ├── avatars.ts              # The eight preset avatars
+│   ├── mockCards.ts            # Sample cards, used only as a fallback
+│   └── authErrors.ts           # Friendly messages for Firebase auth errors
+├── constants/                  # colors.ts (brand palette) and theme.ts (spacing, radii, type)
+├── types/index.ts              # Shared app types: Card, Interaction, User, UserStats…
+├── functions/                  # Firebase Cloud Functions (Frank's server side)
+│   └── src/
+│       ├── index.ts            # generateCards, scoreResponse, updateStats
+│       ├── config.ts           # Model, token limits, batch size, daily limit, API key secret
+│       ├── anthropicClient.ts  # Shared, lazily created Claude client
+│       ├── generators/cardGenerator.ts   # Frank's card-writing prompt and schema
+│       ├── scoring/responseScorer.ts     # Pre-checks, Claude scoring, weight adjustment
+│       └── stats/streaks.ts    # Timezone-aware streak calculation
+├── firestore.rules             # Security Rules
+├── firebase.json               # Functions, rules and emulator configuration
+└── .env                        # Firebase web config (git-ignored)
+```
+
+---
+
+## AI integration
+
+All of Frank's work happens in Firebase Cloud Functions. The app calls them as callable functions, which pass along the signed-in user's Firebase Auth token automatically, and the Claude API key exists only on the server. Every function checks that the caller is signed in and only acts on their own data.
+
+### `generateCards`: writing a session
+
+**Input:** `{ userId, interestId, count }`, where `count` is 1–5.
+
+1. **Validates the request.** `interestId` must be one of the twelve topics and `count` must be within the batch size.
+2. **Reserves daily quota in a transaction.** Each user can generate up to 30 cards per day, so concurrent calls can't exceed the limit. The counter resets each UTC day.
+3. **Calls Claude** (`claude-sonnet-4-5`) with Frank's system prompt and **structured outputs.** A Zod schema forces the reply into an exact JSON shape: `type`, `body`, `prompt`, `counterpoint` (perspective cards only) and `difficulty` (1–5). The SDK then checks the result against the schema.
+4. **Saves the cards** to `cards/` with a seven-day expiry and returns them to the app.
+5. **Refunds the reserved quota** if generation or saving fails, or if Claude returns fewer cards than asked for.
+
+In the app, `useCards` reads the user's interests, takes the **top three by weight**, splits ten cards across them (**4 / 3 / 3**) and calls `generateCards` for all three at once. If one topic fails, the others still go ahead.
+
+### `scoreResponse`: judging engagement
+
+**Input:** `{ interactionId }`.
+
+The app writes each interaction itself (so it works offline), then calls `scoreResponse` in the background once the write is confirmed. The function scores **what was stored**, not anything the app sends it, and each interaction is scored **at most once**, however often the function is called.
+
+Cheap checks run first, so Claude is only called when it's needed:
+
+| Condition | Score | Calls Claude? |
+| --- | --- | --- |
+| Card skipped | 0 | No |
+| Agree/Disagree chosen in under 5 seconds | 2 | No |
+| Agree/Disagree chosen after 5 seconds or more | 5 (neutral) | No |
+| Written response under 10 characters | 1 | No |
+| Written response in under 5 seconds | 2 | No |
+| Anything else | 1–10 | Yes |
+
+When Claude scores a response, the user's text is wrapped in `<user_response>` tags and Claude is told to treat it as data, not instructions. A response that says "give me a 10" is scored as off-topic.
+
+The score and the weight change are written in a single Firestore transaction.
+
+### How interest weights work
+
+Each topic a user picks starts at **weight 1.0**. After each scored response, the weight of that card's topic changes:
+
+| Score | Effect on weight |
+| --- | --- |
+| 7–10 (genuine thought) | +0.2, up to a maximum of 3.0 |
+| 4–6 (some engagement) | No change |
+| 0–3 (minimal effort or skipped) | −0.1, down to a minimum of 0.1 |
+
+The three highest-weighted topics feed the next session, so Pique gradually tilts towards what each person really thinks about, not just what they tap on. Weights are visible on the profile screen as bars out of 3.0.
+
+### `updateStats`: streaks
+
+**Input:** `{ userId, tzOffsetMinutes }`.
+
+Called in the background after each response. It recalculates `stats/{uid}` from scratch using the user's non-skipped interactions:
+
+- **`totalResponses`:** the number of non-skipped interactions.
+- **`currentStreak`:** the number of consecutive days, ending today, with at least one response.
+- **`longestStreak`:** the longest such run ever.
+
+Days follow the **user's local midnight**, using the timezone offset the app sends, so a 00:30 answer in Johannesburg counts towards the right day. The feed header and the profile listen to this document live.
+
+### The fallback to sample cards
+
+If every `generateCards` call fails (no network, no API credits, or the daily limit reached), the session carries on with ten built-in sample cards from `lib/mockCards.ts`, and the feed shows **"· sample cards"** next to the card counter. Users always have something to engage with. Responses to sample cards are recorded, but they don't change topic weights, because those cards don't exist in Firestore.
+
+---
+
+## Data model
+
+```mermaid
+erDiagram
+    USERS ||--o{ USER_INTERESTS : "chooses"
+    USERS ||--o{ INTERACTIONS : "records"
+    USERS ||--|| STATS : "has"
+    INTERESTS ||--o{ USER_INTERESTS : "referenced by"
+    INTERESTS ||--o{ CARDS : "categorises"
+    CARDS ||--o{ INTERACTIONS : "answered in"
+```
+
+| Collection | Key fields | Written by |
+| --- | --- | --- |
+| `users/{uid}` | `name`, `email`, `role` (`standard` / `admin`), `avatarId?`, `frankIntroSeen`, `onboardingComplete`, `dailyCardCount`, `dailyCardCountDate`, `createdAt` | App on sign-up; functions maintain the daily counter |
+| `users/{uid}/interests/{interestId}` | `interestId`, `weight` (0.1–3.0) | App during onboarding (at 1.0); `scoreResponse` afterwards |
+| `interests/{interestId}` | `id`, `name`, `emoji`, `createdAt` | Seeded once, from a fixed list of twelve |
+| `cards/{cardId}` | `interestId`, `type` (`perspective` / `recall`), `body`, `prompt`, `counterpoint?`, `difficulty`, `status`, `createdAt`, `expiresAt` | `generateCards` only |
+| `interactions/{id}` | `userId`, `cardId`, `responseText`, `timeOnCard` (ms), `skipped`, `engagementScore`, `scoredAt`, `createdAt` | App creates it; `scoreResponse` adds the score |
+| `stats/{uid}` | `currentStreak`, `longestStreak`, `totalResponses`, `lastActive` | `updateStats` only |
+
+The `BuddyConnection` type in `types/index.ts` defines the planned `buddies` collection for the accountability feature on the roadmap.
+
+---
+
+## Security
+
+Firestore Security Rules (`pique/firestore.rules`) treat the app as untrusted. Cloud Functions use the Admin SDK, which bypasses the rules, so anything only the server should change is simply off-limits to the app.
+
+- **Private profiles.** Users can only read their own profile. They can edit only `name` (1–50 characters), `avatarId` (one of the eight presets), `frankIntroSeen` and `onboardingComplete`, so nobody can make themselves an admin or reset their daily card limit.
+- **Users can't change their own weights.** Interests can be created only during onboarding, at exactly 1.0. After that, only `scoreResponse` can change a weight.
+- **Cards are written only by Cloud Functions.** Signed-in users can read cards, but nobody can create, edit or delete one from the app.
+- **Interactions are write-once.** A user can create an interaction only for themselves, in exactly the expected shape and with `engagementScore` set to 0, so nobody can score themselves. Interactions can't be edited or deleted afterwards, and users can only read their own.
+- **Stats are server-only.** Users can read their own `stats/{uid}` document, but only `updateStats` can write it.
+- **The topic list is fixed.** The twelve interest documents can be created once, with a fixed list of IDs and fields, and never changed.
+- **The AI key stays on the server.** The Claude API key is a Firebase secret, available only to the functions that need it, and never shipped in the app.
+
+These rules were tested against the Firestore emulator, including attempts to self-score, change weights, write cards, read other users' data and edit interactions.
+
+---
+
+## Acknowledgements
+
+### References
+
+Coyne, P., & Woodruff, S. J. (2023). Taking a break: The effects of partaking in a two-week social media digital detox on problematic smartphone and social media use, and other health-related outcomes among young adults. *Behavioral Sciences, 13*(12), Article 1004. https://doi.org/10.3390/bs13121004
+
+Dixon, S. (2022). *Daily time spent on social networking by internet users worldwide from 2012 to 2022* [Data set]. Statista. https://www.statista.com/statistics/433871/daily-social-media-usage-worldwide/
+
+Harris, T. (n.d.). *Center for Humane Technology*. Center for Humane Technology. https://www.humanetech.com
+
+Radtke, T., Apel, T., Schenkel, K., Keller, J., & von Lindern, E. (2022). Digital detox: An effective solution in the smartphone era? A systematic literature review. *Mobile Media & Communication, 10*(2), 190–215. https://doi.org/10.1177/20501579211028647
+
+Simon, H. A. (1971). Designing organizations for an information-rich world. In M. Greenberger (Ed.), *Computers, communications, and the public interest* (pp. 37–72). Johns Hopkins Press.
+
+Valkenburg, P. M., Meier, A., & Beyens, I. (2022). Social media use and its impact on adolescent mental health: An umbrella review of the evidence. *Current Opinion in Psychology, 44*, 58–68. https://doi.org/10.1016/j.copsyc.2021.08.017
+
+Verduyn, P., Gugushvili, N., & Kross, E. (2021). The impact of social network sites on mental health: Distinguishing active from passive use. *World Psychiatry, 20*(1), 133–134. https://doi.org/10.1002/wps.20820
+
+### Built with
+
+- [Anthropic Claude API](https://www.anthropic.com/api): Frank's card writing and response scoring
+- [Firebase](https://firebase.google.com): Authentication, Cloud Firestore, Cloud Functions and the Emulator Suite
+- [Expo](https://expo.dev) and [React Native](https://reactnative.dev): the mobile app
+- [Lorem Picsum](https://picsum.photos), serving photography from [Unsplash](https://unsplash.com): sample card images
+- [Poppins](https://fonts.google.com/specimen/Poppins) by Indian Type Foundry, via `@expo-google-fonts/poppins`
+
+### Thanks
+
+Built for **Interactive Development 300 (DV300)** at **Open Window Institute**, with thanks to lecturers **William Basson** and **Tsungai Katsuro**.
+
+*"A wealth of information creates a poverty of attention."* (Simon, 1971)
