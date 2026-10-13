@@ -79,7 +79,7 @@ export default function RegisterScreen() {
         value={password}
         onChangeText={setPassword}
         placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
-        secureTextEntry
+        password
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="next"
@@ -89,7 +89,7 @@ export default function RegisterScreen() {
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         placeholder="Re-enter your password"
-        secureTextEntry
+        password
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="go"
