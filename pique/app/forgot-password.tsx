@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { FirebaseError } from 'firebase/app';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
 import { FormScreen } from '@/components/ui/FormScreen';
@@ -9,7 +10,8 @@ import { TextField } from '@/components/ui/TextField';
 import { authStyles } from '@/components/ui/authStyles';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
-import { auth } from '@/lib/firebase';
+import { getAuthErrorMessage } from '@/lib/authErrors';
+import { auth, useEmulators } from '@/lib/firebase';
 
 const MIN_TOUCH_TARGET = 44;
 
@@ -40,8 +42,15 @@ export default function ForgotPasswordScreen() {
       await sendPasswordResetEmail(auth, trimmed);
       setSentTo(trimmed);
     } catch (e) {
-      console.warn('Password reset failed', e);
-      setError('Couldn’t send a reset link. Check the address and try again.');
+      // Don't reveal whether an account exists: an unknown email gets the
+      // same confirmation, as it does in production with Firebase's email
+      // enumeration protection on.
+      if (e instanceof FirebaseError && e.code === 'auth/user-not-found') {
+        setSentTo(trimmed);
+      } else {
+        console.warn('Password reset failed', e);
+        setError(getAuthErrorMessage(e));
+      }
     } finally {
       setSending(false);
     }
@@ -85,9 +94,17 @@ export default function ForgotPasswordScreen() {
       </View>
 
       {sentTo ? (
-        <Text style={styles.success} accessibilityLiveRegion="polite">
-          Check your inbox — we sent a reset link to {sentTo}.
-        </Text>
+        <View style={styles.field}>
+          <Text style={styles.success} accessibilityLiveRegion="polite">
+            If an account exists for {sentTo}, we’ve sent a reset link. Check your inbox.
+          </Text>
+          {useEmulators && (
+            <Text style={styles.devNote}>
+              Dev: the emulator doesn’t send email. The reset link is printed in the emulator
+              terminal.
+            </Text>
+          )}
+        </View>
       ) : (
         <Button title="Send reset link" onPress={handleSend} loading={sending} />
       )}
@@ -126,6 +143,12 @@ const styles = StyleSheet.create({
     color: Colors.success,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
+    textAlign: 'center',
+  },
+  devNote: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.xs,
     textAlign: 'center',
   },
 });

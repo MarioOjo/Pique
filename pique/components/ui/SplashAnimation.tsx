@@ -29,10 +29,19 @@ const TAGLINE_MS = 1400; // tagline breathes in, last of all
 const HOLD_MS = 1500; // final lock-up before moving on
 // Returning users (and reduced motion) get the finished lock-up only.
 const SHORT_HOLD_MS = 1200;
+// Screen reader users get the lock-up with time for it to be announced.
+const SCREEN_READER_HOLD_MS = 3000;
 const EXIT_MS = 300; // fade out to the app
+// "Tap to skip" fades in once the full intro is under way.
+const SKIP_HINT_DELAY_MS = 1000;
+const SKIP_HINT_MS = 400;
+const SKIP_HINT_OPACITY = 0.6;
 
 // Set once the full intro has been seen, so it only plays on first launch.
 const INTRO_SEEN_KEY = 'pique.splashIntroSeen';
+// Dev only: set EXPO_PUBLIC_ALWAYS_PLAY_INTRO=true in .env to play the full
+// intro on every launch. Ignored in release builds.
+const ALWAYS_PLAY_INTRO = __DEV__ && process.env.EXPO_PUBLIC_ALWAYS_PLAY_INTRO === 'true';
 
 // Shape.
 const LETTERS = ['i', 'q', 'u', 'e'] as const;
@@ -86,9 +95,11 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
     star: new Animated.Value(0),
     tagline: new Animated.Value(0),
     exit: new Animated.Value(1),
+    skipHint: new Animated.Value(0),
   }));
   // 'full' plays the scan; 'short' shows the lock-up. Null until known.
   const [mode, setMode] = useState<'full' | 'short' | null>(null);
+  const [screenReader, setScreenReader] = useState(false);
   const [measured, setMeasured] = useState<Layout | null>(null);
   // True once the intro has finished or been skipped.
   const [played, setPlayed] = useState(false);
@@ -104,9 +115,14 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
     let cancelled = false;
     Promise.all([
       AccessibilityInfo.isReduceMotionEnabled(),
+      AccessibilityInfo.isScreenReaderEnabled(),
       AsyncStorage.getItem(INTRO_SEEN_KEY).catch(() => null),
-    ]).then(([reduceMotion, seen]) => {
-      if (!cancelled) setMode(reduceMotion || seen ? 'short' : 'full');
+    ]).then(([reduceMotion, screenReaderOn, seen]) => {
+      if (cancelled) return;
+      // A screen reader can't follow the scan, so go straight to the lock-up.
+      const skipFull = reduceMotion || screenReaderOn || (seen && !ALWAYS_PLAY_INTRO);
+      setScreenReader(screenReaderOn);
+      setMode(skipFull ? 'short' : 'full');
     });
     return () => {
       cancelled = true;
@@ -115,7 +131,9 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
 
   // Jumps to the finished lock-up (used for the short version and on skip).
   const showLockUp = useCallback(() => {
-    const { pX, pY, pWeight, pScale, pOpacity, letterOpacity, tile, star, tagline } = values;
+    const { pX, pY, pWeight, pScale, pOpacity, letterOpacity, tile, star, tagline, skipHint } =
+      values;
+    skipHint.setValue(0);
     pX.setValue(0);
     pY.setValue(0);
     pWeight.setValue(1);
@@ -181,7 +199,10 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
 
     if (mode === 'short') {
       showLockUp();
-      const hold = Animated.delay(SHORT_HOLD_MS);
+      if (screenReader) {
+        AccessibilityInfo.announceForAccessibility('Pique. Think before you scroll.');
+      }
+      const hold = Animated.delay(screenReader ? SCREEN_READER_HOLD_MS : SHORT_HOLD_MS);
       animation.current = hold;
       hold.start(({ finished }) => {
         if (finished) setPlayed(true);
@@ -228,11 +249,14 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
       ]);
     });
 
-    const intro = Animated.sequence([
+    const { skipHint } = values;
+    const sequence = Animated.sequence([
       Animated.delay(INTRO_DELAY_MS),
       ...scan,
       // Home: the P slides back beside the i and every letter lights up.
       Animated.parallel([
+        // The skip hint has done its job once the lock-up starts.
+        timing(skipHint, 0, SETTLE_MS, Easing.out(Easing.cubic)),
         timing(pX, 0, SETTLE_MS, Easing.out(Easing.cubic)),
         timing(pY, 0, SETTLE_MS, Easing.out(Easing.cubic)),
         timing(pScale, 1, SETTLE_MS, Easing.out(Easing.cubic)),
@@ -245,6 +269,13 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
       timing(tagline, 1, TAGLINE_MS, Easing.in(Easing.quad)),
       Animated.delay(HOLD_MS),
     ]);
+    const intro = Animated.parallel([
+      sequence,
+      Animated.sequence([
+        Animated.delay(SKIP_HINT_DELAY_MS),
+        timing(skipHint, SKIP_HINT_OPACITY, SKIP_HINT_MS, Easing.out(Easing.quad)),
+      ]),
+    ]);
     // Wait one frame after measuring so every layout has settled.
     animation.current = intro;
     const frame = requestAnimationFrame(() => {
@@ -256,7 +287,7 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
       cancelAnimationFrame(frame);
       intro.stop();
     };
-  }, [measured, mode, played, values, showLockUp]);
+  }, [measured, mode, played, screenReader, values, showLockUp]);
 
   // Shift the tile and star from the P's text box centre to its ink centre.
   const inkShift = measured
@@ -377,6 +408,14 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
             Think before you scroll.
           </Animated.Text>
         </View>
+        {/* Visual cue only; screen readers get the button's hint instead. */}
+        <Animated.Text
+          style={[styles.skipHint, { opacity: values.skipHint }]}
+          importantForAccessibility="no"
+          accessibilityElementsHidden
+        >
+          Tap to skip
+        </Animated.Text>
       </Pressable>
     </Animated.View>
   );
@@ -458,5 +497,12 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     marginTop: Theme.spacing.lg,
+  },
+  skipHint: {
+    position: 'absolute',
+    bottom: Theme.spacing.xxl,
+    color: Colors.lavenderGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
   },
 });
