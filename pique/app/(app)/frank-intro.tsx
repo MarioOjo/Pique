@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { doc, updateDoc } from 'firebase/firestore';
+import { AccountCreated } from '@/components/onboarding/AccountCreated';
 import { PiqueMark } from '@/components/ui/PiqueMark';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
@@ -17,20 +18,26 @@ const HOW_IT_WORKS = [
 
 const LOGO_FADE_MS = 600;
 
-// Shown once, between registering and picking interests.
+// Shown once, between registering and picking interests. Opens with a
+// short "Account created" confirmation, then the intro itself.
 export default function FrankIntroScreen() {
-  const { user } = useAuth();
+  const { user, piqueUser } = useAuth();
+  const [showAccountCreated, setShowAccountCreated] = useState(true);
   const [logoOpacity] = useState(() => new Animated.Value(0));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Stable, so the confirmation's timer isn't restarted by re-renders.
+  const finishAccountCreated = useCallback(() => setShowAccountCreated(false), []);
+
   useEffect(() => {
+    if (showAccountCreated) return;
     Animated.timing(logoOpacity, {
       toValue: 1,
       duration: LOGO_FADE_MS,
       useNativeDriver: true,
     }).start();
-  }, [logoOpacity]);
+  }, [showAccountCreated, logoOpacity]);
 
   const handleContinue = async () => {
     if (!user || saving) return;
@@ -46,6 +53,15 @@ export default function FrankIntroScreen() {
       setSaving(false);
     }
   };
+
+  if (showAccountCreated) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <AccountCreated name={piqueUser?.name} onDone={finishAccountCreated} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
