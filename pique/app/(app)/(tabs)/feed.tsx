@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CardComponent } from '@/components/cards/CardComponent';
+import { DoneForToday } from '@/components/feed/DoneForToday';
 import { SessionComplete } from '@/components/feed/SessionComplete';
 import { Button } from '@/components/ui/Button';
 import { LogoMark } from '@/components/ui/LogoMark';
@@ -44,6 +45,8 @@ export default function FeedScreen() {
     isLoading,
     error,
     usingFallbackCards,
+    outOfCardsToday,
+    moreCardsToday,
   } = useCards();
   // Live, so the header and session summary update as soon as updateStats runs.
   const { stats } = useStats(user?.uid);
@@ -91,6 +94,15 @@ export default function FeedScreen() {
       );
     }
 
+    if (!error && outOfCardsToday) {
+      return (
+        <DoneForToday
+          onCheckAgain={loadCards}
+          onViewProfile={() => router.navigate('/profile')}
+        />
+      );
+    }
+
     if (error || totalCards === 0) {
       return (
         <View style={styles.centered}>
@@ -108,6 +120,7 @@ export default function FeedScreen() {
           cardsCompleted={engagedCount}
           topicsExplored={new Set(sessionCards.map((card) => card.interestId)).size}
           bestStreak={stats.longestStreak}
+          moreToday={moreCardsToday}
           onStartNewSession={loadCards}
           onViewProfile={() => router.navigate('/profile')}
         />

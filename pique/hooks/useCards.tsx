@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { FirebaseError } from 'firebase/app';
 import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { generateCards, scoreResponse, updateStats } from '@/lib/claude';
@@ -24,6 +25,10 @@ interface UseCardsResult {
   error: string | null;
   // True when generation failed and the session uses sample cards.
   usingFallbackCards: boolean;
+  // True when today's card allowance is used up and no session could load.
+  outOfCardsToday: boolean;
+  // False once the last session of the day has been handed out.
+  moreCardsToday: boolean;
 }
 
 const TOP_INTEREST_COUNT = 3;
@@ -52,12 +57,22 @@ async function getTopInterests(userId: string): Promise<UserInterest[]> {
     .slice(0, TOP_INTEREST_COUNT);
 }
 
+interface GeneratedSession {
+  cards: Card[];
+  // Every call was refused because today's allowance is used up.
+  limitReached: boolean;
+  // Cards left today, or null if the function didn't say.
+  remainingToday: number | null;
+}
+
+const isDailyLimitError = (reason: unknown) =>
+  reason instanceof FirebaseError && reason.code === 'functions/resource-exhausted';
+
 // Generates a session's worth of cards across the user's top interests,
-// in parallel. Interests whose generation fails are left out; returns an
-// empty array if every call fails (e.g. the daily limit was reached).
-async function generateSessionCards(userId: string): Promise<Card[]> {
+// in parallel. Interests whose generation fails are left out.
+async function generateSessionCards(userId: string): Promise<GeneratedSession> {
   const interests = await getTopInterests(userId);
-  if (interests.length === 0) return [];
+  if (interests.length === 0) return { cards: [], limitReached: false, remainingToday: null };
 
   const counts = distributeCards(SESSION_SIZE, interests.length);
   const results = await Promise.allSettled(
@@ -65,14 +80,25 @@ async function generateSessionCards(userId: string): Promise<Card[]> {
   );
 
   const cards: Card[] = [];
+  // The calls run in parallel, so the smallest count reported is the most
+  // up to date.
+  let remainingToday: number | null = null;
   results.forEach((result, i) => {
     if (result.status === 'fulfilled') {
       cards.push(...result.value.cards);
-    } else {
+      const remaining = result.value.remainingToday;
+      if (remaining !== undefined) {
+        remainingToday = remainingToday === null ? remaining : Math.min(remainingToday, remaining);
+      }
+    } else if (!isDailyLimitError(result.reason)) {
       console.warn(`Card generation failed for ${interests[i].interestId}`, result.reason);
     }
   });
-  return cards;
+  const limitReached = results.every(
+    (result) => result.status === 'rejected' && isDailyLimitError(result.reason),
+  );
+  if (limitReached) remainingToday = 0;
+  return { cards, limitReached, remainingToday };
 }
 
 // Fisher–Yates shuffle; returns a new array.
@@ -93,6 +119,8 @@ export function useCards(): UseCardsResult {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usingFallbackCards, setUsingFallbackCards] = useState(false);
+  const [outOfCardsToday, setOutOfCardsToday] = useState(false);
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
   // Mirrors currentIndex so a double tap can't record or advance twice
   // before React re-renders.
   const indexRef = useRef(0);
@@ -101,8 +129,14 @@ export function useCards(): UseCardsResult {
     setIsLoading(true);
     setError(null);
     try {
-      let cards = user ? await generateSessionCards(user.uid) : [];
-      const fallback = cards.length === 0;
+      const session = user
+        ? await generateSessionCards(user.uid)
+        : { cards: [], limitReached: false, remainingToday: null };
+      setRemainingToday(session.remainingToday);
+      setOutOfCardsToday(session.limitReached);
+      let cards = session.cards;
+      // Out of cards for today is a real stop, not a failure: no samples.
+      const fallback = cards.length === 0 && !session.limitReached;
       if (fallback) {
         console.warn('No generated cards available; using sample cards');
         cards = [...MOCK_CARDS];
@@ -195,5 +229,7 @@ export function useCards(): UseCardsResult {
     isLoading,
     error,
     usingFallbackCards,
+    outOfCardsToday,
+    moreCardsToday: remainingToday === null || remainingToday > 0,
   };
 }

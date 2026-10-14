@@ -35,6 +35,9 @@ export interface GenerateCardsResult {
   cardsGenerated: number;
   message: string;
   cards: StoredCard[];
+  // Cards the user can still generate today, so the app can tell them
+  // when they're done for the day.
+  remainingToday: number;
 }
 
 export interface ScoreResponseRequest {

@@ -35,6 +35,9 @@ export interface GenerateCardsResponse {
   cardsGenerated: number;
   message: string;
   cards: Card[];
+  // Cards the user can still generate today. Optional so an older deployed
+  // function without it still works.
+  remainingToday?: number;
 }
 
 function toCard(stored: StoredCard): Card {
