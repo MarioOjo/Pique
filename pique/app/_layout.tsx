@@ -51,7 +51,9 @@ function RootNavigator() {
     <>
       <StatusBar style={showSplash ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }} />
-      {showSplash && <SplashAnimation onDone={() => setShowSplash(false)} />}
+      {showSplash && (
+        <SplashAnimation appReady={!loading} onDone={() => setShowSplash(false)} />
+      )}
     </>
   );
 }

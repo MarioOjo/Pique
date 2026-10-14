@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '@/constants/colors';
@@ -26,6 +27,12 @@ const STAR_MS = 300; // amber star twirls in
 const TAGLINE_DELAY_MS = 200; // beat between the star and the tagline
 const TAGLINE_MS = 1400; // tagline breathes in, last of all
 const HOLD_MS = 1500; // final lock-up before moving on
+// Returning users (and reduced motion) get the finished lock-up only.
+const SHORT_HOLD_MS = 1200;
+const EXIT_MS = 300; // fade out to the app
+
+// Set once the full intro has been seen, so it only plays on first launch.
+const INTRO_SEEN_KEY = 'pique.splashIntroSeen';
 
 // Shape.
 const LETTERS = ['i', 'q', 'u', 'e'] as const;
@@ -56,12 +63,16 @@ type Box = { x: number; width: number; height: number };
 type Layout = { mark: Box; p: Box; letters: Box[] };
 
 interface SplashAnimationProps {
+  // False while the app underneath is still loading; the splash stays up
+  // until it's true so the user never sees a blank screen.
+  appReady: boolean;
   onDone: () => void;
 }
 
-// Cold-start intro: the P reads "ique" letter by letter, settles home, and
-// the logo builds around it. Tap anywhere to skip.
-export function SplashAnimation({ onDone }: SplashAnimationProps) {
+// Cold-start intro: on first launch the P reads "ique" letter by letter,
+// settles home, and the logo builds around it. Later launches show just the
+// lock-up. Tap anywhere to skip.
+export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
   const [values] = useState(() => ({
     pX: new Animated.Value(-P_START_OFFSET),
     pY: new Animated.Value(0),
@@ -74,33 +85,72 @@ export function SplashAnimation({ onDone }: SplashAnimationProps) {
     tile: new Animated.Value(0),
     star: new Animated.Value(0),
     tagline: new Animated.Value(0),
+    exit: new Animated.Value(1),
   }));
-  const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
+  // 'full' plays the scan; 'short' shows the lock-up. Null until known.
+  const [mode, setMode] = useState<'full' | 'short' | null>(null);
   const [measured, setMeasured] = useState<Layout | null>(null);
+  // True once the intro has finished or been skipped.
+  const [played, setPlayed] = useState(false);
   const layout = useRef<{ mark?: Box; p?: Box; letters: (Box | undefined)[] }>({ letters: [] });
-  const done = useRef(false);
-  // Kept in a ref so a new onDone from a parent re-render doesn't restart
-  // the animation (finish is a dependency of the effect that runs it).
+  const animation = useRef<Animated.CompositeAnimation | null>(null);
+  // Kept in a ref so a new onDone from a parent re-render doesn't matter.
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
   }, [onDone]);
 
-  const finish = useCallback(() => {
-    if (done.current) return;
-    done.current = true;
-    onDoneRef.current();
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
-      if (!cancelled) setReduceMotion(enabled);
+    Promise.all([
+      AccessibilityInfo.isReduceMotionEnabled(),
+      AsyncStorage.getItem(INTRO_SEEN_KEY).catch(() => null),
+    ]).then(([reduceMotion, seen]) => {
+      if (!cancelled) setMode(reduceMotion || seen ? 'short' : 'full');
     });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // Jumps to the finished lock-up (used for the short version and on skip).
+  const showLockUp = useCallback(() => {
+    const { pX, pY, pWeight, pScale, pOpacity, letterOpacity, tile, star, tagline } = values;
+    pX.setValue(0);
+    pY.setValue(0);
+    pWeight.setValue(1);
+    pScale.setValue(1);
+    pOpacity.setValue(1);
+    letterOpacity.forEach((v) => v.setValue(1));
+    tile.setValue(1);
+    star.setValue(1);
+    tagline.setValue(1);
+  }, [values]);
+
+  const skip = () => {
+    if (played) return;
+    animation.current?.stop();
+    showLockUp();
+    setPlayed(true);
+  };
+
+  // Leave once the intro is over and the app underneath is ready.
+  useEffect(() => {
+    if (!played || !appReady) return;
+    if (mode === 'full') {
+      AsyncStorage.setItem(INTRO_SEEN_KEY, 'true').catch(() => {});
+    }
+    const fade = Animated.timing(values.exit, {
+      toValue: 0,
+      duration: EXIT_MS,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    fade.start(({ finished }) => {
+      if (finished) onDoneRef.current();
+    });
+    return () => fade.stop();
+  }, [played, appReady, mode, values]);
 
   const checkMeasured = () => {
     const { mark, p, letters } = layout.current;
@@ -121,26 +171,20 @@ export function SplashAnimation({ onDone }: SplashAnimationProps) {
     checkMeasured();
   };
 
-  const ready = measured !== null && reduceMotion !== null;
+  const ready = measured !== null && mode !== null;
+  const exiting = played && appReady;
 
   useEffect(() => {
-    if (!measured || reduceMotion === null) return;
+    // Also stops a running intro once it is skipped.
+    if (!measured || !mode || played) return;
     const { pX, pY, pWeight, pScale, pOpacity, letterOpacity, tile, star, tagline } = values;
 
-    if (reduceMotion) {
-      // Show the finished lock-up straight away.
-      pX.setValue(0);
-      pY.setValue(0);
-      pWeight.setValue(1);
-      pScale.setValue(1);
-      pOpacity.setValue(1);
-      letterOpacity.forEach((v) => v.setValue(1));
-      tile.setValue(1);
-      star.setValue(1);
-      tagline.setValue(1);
-      const hold = Animated.delay(HOLD_MS);
+    if (mode === 'short') {
+      showLockUp();
+      const hold = Animated.delay(SHORT_HOLD_MS);
+      animation.current = hold;
       hold.start(({ finished }) => {
-        if (finished) finish();
+        if (finished) setPlayed(true);
       });
       return () => hold.stop();
     }
@@ -184,7 +228,7 @@ export function SplashAnimation({ onDone }: SplashAnimationProps) {
       ]);
     });
 
-    const animation = Animated.sequence([
+    const intro = Animated.sequence([
       Animated.delay(INTRO_DELAY_MS),
       ...scan,
       // Home: the P slides back beside the i and every letter lights up.
@@ -202,16 +246,17 @@ export function SplashAnimation({ onDone }: SplashAnimationProps) {
       Animated.delay(HOLD_MS),
     ]);
     // Wait one frame after measuring so every layout has settled.
+    animation.current = intro;
     const frame = requestAnimationFrame(() => {
-      animation.start(({ finished }) => {
-        if (finished) finish();
+      intro.start(({ finished }) => {
+        if (finished) setPlayed(true);
       });
     });
     return () => {
       cancelAnimationFrame(frame);
-      animation.stop();
+      intro.stop();
     };
-  }, [measured, reduceMotion, values, finish]);
+  }, [measured, mode, played, values, showLockUp]);
 
   // Shift the tile and star from the P's text box centre to its ink centre.
   const inkShift = measured
@@ -236,98 +281,104 @@ export function SplashAnimation({ onDone }: SplashAnimationProps) {
   });
 
   return (
-    <Pressable
-      style={styles.container}
-      onPress={finish}
-      onLayout={() => SplashScreen.hideAsync()}
-      accessibilityRole="button"
-      accessibilityLabel="Pique. Think before you scroll."
-      accessibilityHint="Skips the intro"
+    <Animated.View
+      style={[styles.container, { opacity: values.exit }]}
+      // Let taps reach the app while fading out.
+      pointerEvents={exiting ? 'none' : 'auto'}
     >
-      <View style={[styles.content, !ready && styles.hidden]}>
-        <View style={styles.wordmark}>
-          <Animated.View
-            onLayout={onMarkLayout}
-            style={[
-              styles.mark,
-              {
-                opacity: values.pOpacity,
-                transform: [
-                  { translateX: values.pX },
-                  { translateY: values.pY },
-                  { scale: values.pScale },
-                ],
-              },
-            ]}
-          >
+      <Pressable
+        style={styles.pressable}
+        onPress={skip}
+        onLayout={() => SplashScreen.hideAsync()}
+        accessibilityRole="button"
+        accessibilityLabel="Pique. Think before you scroll."
+        accessibilityHint="Skips the intro"
+      >
+        <View style={[styles.content, !ready && styles.hidden]}>
+          <View style={styles.wordmark}>
             <Animated.View
+              onLayout={onMarkLayout}
               style={[
-                styles.tile,
+                styles.mark,
                 {
-                  opacity: values.tile,
+                  opacity: values.pOpacity,
                   transform: [
-                    { translateX: inkShift.x },
-                    { translateY: inkShift.y },
-                    { scale: tileScale },
-                  ],
-                },
-              ]}
-            />
-            {/* The SemiBold P sets the layout; a Light P sits on top while
-                scanning so letters read clearly through its counter. Font
-                scaling is off so the logo's geometry matches the metrics. */}
-            <View onLayout={onPLayout}>
-              <Animated.Text
-                allowFontScaling={false}
-                style={[styles.p, { opacity: values.pWeight }]}
-              >
-                P
-              </Animated.Text>
-              <Animated.Text
-                allowFontScaling={false}
-                style={[styles.p, styles.pThin, { opacity: thinPOpacity }]}
-              >
-                P
-              </Animated.Text>
-            </View>
-            <Animated.View
-              style={[
-                styles.star,
-                {
-                  opacity: values.star,
-                  transform: [
-                    { translateX: inkShift.x },
-                    { translateY: inkShift.y },
-                    { rotate: starRotate },
-                    { scale: values.star },
+                    { translateX: values.pX },
+                    { translateY: values.pY },
+                    { scale: values.pScale },
                   ],
                 },
               ]}
             >
-              <Svg width={STAR_SIZE} height={STAR_SIZE} viewBox="48 6 18 18">
-                <Path
-                  d="M57 6 Q58.6 13.4 66 15 Q58.6 16.6 57 24 Q55.4 16.6 48 15 Q55.4 13.4 57 6 Z"
-                  fill={Colors.amber}
-                />
-              </Svg>
+              <Animated.View
+                style={[
+                  styles.tile,
+                  {
+                    opacity: values.tile,
+                    transform: [
+                      { translateX: inkShift.x },
+                      { translateY: inkShift.y },
+                      { scale: tileScale },
+                    ],
+                  },
+                ]}
+              />
+              {/* The SemiBold P sets the layout; a Light P sits on top while
+                  scanning so letters read clearly through its counter. Font
+                  scaling is off so the logo's geometry matches the metrics. */}
+              <View onLayout={onPLayout}>
+                <Animated.Text
+                  allowFontScaling={false}
+                  style={[styles.p, { opacity: values.pWeight }]}
+                >
+                  P
+                </Animated.Text>
+                <Animated.Text
+                  allowFontScaling={false}
+                  style={[styles.p, styles.pThin, { opacity: thinPOpacity }]}
+                >
+                  P
+                </Animated.Text>
+              </View>
+              <Animated.View
+                style={[
+                  styles.star,
+                  {
+                    opacity: values.star,
+                    transform: [
+                      { translateX: inkShift.x },
+                      { translateY: inkShift.y },
+                      { rotate: starRotate },
+                      { scale: values.star },
+                    ],
+                  },
+                ]}
+              >
+                <Svg width={STAR_SIZE} height={STAR_SIZE} viewBox="48 6 18 18">
+                  <Path
+                    d="M57 6 Q58.6 13.4 66 15 Q58.6 16.6 57 24 Q55.4 16.6 48 15 Q55.4 13.4 57 6 Z"
+                    fill={Colors.amber}
+                  />
+                </Svg>
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
-          {LETTERS.map((letter, k) => (
-            <Animated.Text
-              key={letter}
-              onLayout={onLetterLayout(k)}
-              allowFontScaling={false}
-              style={[styles.letter, { opacity: values.letterOpacity[k] }]}
-            >
-              {letter}
-            </Animated.Text>
-          ))}
+            {LETTERS.map((letter, k) => (
+              <Animated.Text
+                key={letter}
+                onLayout={onLetterLayout(k)}
+                allowFontScaling={false}
+                style={[styles.letter, { opacity: values.letterOpacity[k] }]}
+              >
+                {letter}
+              </Animated.Text>
+            ))}
+          </View>
+          <Animated.Text style={[styles.tagline, { opacity: values.tagline }]}>
+            Think before you scroll.
+          </Animated.Text>
         </View>
-        <Animated.Text style={[styles.tagline, { opacity: values.tagline }]}>
-          Think before you scroll.
-        </Animated.Text>
-      </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -335,6 +386,9 @@ const styles = StyleSheet.create({
   container: {
     ...StyleSheet.absoluteFill,
     backgroundColor: Colors.navy,
+  },
+  pressable: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
