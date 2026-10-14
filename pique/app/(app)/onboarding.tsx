@@ -68,7 +68,8 @@ export default function OnboardingScreen() {
       {welcome && <WelcomeBanner message={welcome} />}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LogoMark />
-        <ProgressDots total={3} current={1} />
+        {/* Step 3 of 3: after the two intro pages. */}
+        <ProgressDots total={3} current={3} />
 
         <View style={styles.header}>
           <Text style={styles.heading}>What do you want to think about?</Text>
