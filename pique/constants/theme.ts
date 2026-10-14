@@ -23,6 +23,7 @@ export const Theme = {
     xxl: 36,
   },
   fontFamily: {
+    light: 'Poppins_300Light',
     regular: 'Poppins_400Regular',
     semiBold: 'Poppins_600SemiBold',
   },

@@ -1,8 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts, Poppins_400Regular, Poppins_600SemiBold } from '@expo-google-fonts/poppins';
+import {
+  useFonts,
+  Poppins_300Light,
+  Poppins_400Regular,
+  Poppins_600SemiBold,
+} from '@expo-google-fonts/poppins';
+import { SplashAnimation } from '@/components/ui/SplashAnimation';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 
 SplashScreen.preventAutoHideAsync();
@@ -12,6 +18,8 @@ function RootNavigator() {
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
+  // The intro plays over the app on cold start while auth resolves underneath.
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     if (loading) return;
@@ -37,20 +45,23 @@ function RootNavigator() {
     } else if (!inMainApp) {
       router.replace('/feed');
     }
-
-    SplashScreen.hideAsync();
   }, [user, piqueUser, loading, segments, pathname, router]);
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={showSplash ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }} />
+      {showSplash && <SplashAnimation onDone={() => setShowSplash(false)} />}
     </>
   );
 }
 
 export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({ Poppins_400Regular, Poppins_600SemiBold });
+  const [fontsLoaded, fontError] = useFonts({
+    Poppins_300Light,
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+  });
 
   if (!fontsLoaded && !fontError) return null;
 
