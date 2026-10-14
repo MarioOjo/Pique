@@ -39,7 +39,8 @@ export default function RegisterScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      // On success the root layout redirects to onboarding.
+      // On success the root layout redirects to the Frank intro, which
+      // opens by confirming the account was created.
       await signUp(name, email, password);
     } catch (e) {
       setError(getAuthErrorMessage(e));
