@@ -137,9 +137,13 @@ export default function ProfileScreen() {
                 <View key={take.id}>
                   {index > 0 && <View style={styles.takeDivider} />}
                   <View style={styles.take}>
-                    <Text style={styles.takeAction}>
-                      {takeAction(take)} · {interestName(take.interestId)}
-                    </Text>
+                    <View style={styles.takeActionRow}>
+                      {/* Marks written (recall) responses at a glance. */}
+                      {take.cardType === 'recall' && <View style={styles.wroteDot} />}
+                      <Text style={styles.takeAction}>
+                        {takeAction(take)} · {interestName(take.interestId)}
+                      </Text>
+                    </View>
                     <Text style={styles.takeBody} numberOfLines={2} ellipsizeMode="tail">
                       {take.body}
                     </Text>
@@ -307,6 +311,17 @@ const styles = StyleSheet.create({
   takeDivider: {
     height: 1,
     backgroundColor: Colors.borderGrey,
+  },
+  takeActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.xs + Theme.spacing.xs / 2, // 6
+  },
+  wroteDot: {
+    width: Theme.spacing.sm,
+    height: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.full,
+    backgroundColor: Colors.amber,
   },
   takeAction: {
     color: Colors.violet,
