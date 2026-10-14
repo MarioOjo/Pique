@@ -33,6 +33,9 @@ const EXIT_MS = 300; // fade out to the app
 
 // Set once the full intro has been seen, so it only plays on first launch.
 const INTRO_SEEN_KEY = 'pique.splashIntroSeen';
+// Dev only: set EXPO_PUBLIC_ALWAYS_PLAY_INTRO=true in .env to play the full
+// intro on every launch. Ignored in release builds.
+const ALWAYS_PLAY_INTRO = __DEV__ && process.env.EXPO_PUBLIC_ALWAYS_PLAY_INTRO === 'true';
 
 // Shape.
 const LETTERS = ['i', 'q', 'u', 'e'] as const;
@@ -106,7 +109,9 @@ export function SplashAnimation({ appReady, onDone }: SplashAnimationProps) {
       AccessibilityInfo.isReduceMotionEnabled(),
       AsyncStorage.getItem(INTRO_SEEN_KEY).catch(() => null),
     ]).then(([reduceMotion, seen]) => {
-      if (!cancelled) setMode(reduceMotion || seen ? 'short' : 'full');
+      if (cancelled) return;
+      const skipFull = reduceMotion || (seen && !ALWAYS_PLAY_INTRO);
+      setMode(skipFull ? 'short' : 'full');
     });
     return () => {
       cancelled = true;
