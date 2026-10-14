@@ -73,12 +73,13 @@ function todayKey(): string {
  * allowance, so concurrent calls can't both slip under the limit.
  * @param {DocumentReference} userRef The user's profile document.
  * @param {number} requested Number of cards the caller asked for.
- * @return {Promise<number>} How many cards were reserved.
+ * @return {Promise<{reserved: number, remaining: number}>} How many cards
+ *   were reserved, and how many are left today after this reservation.
  */
 async function reserveDailyQuota(
   userRef: DocumentReference,
   requested: number,
-): Promise<number> {
+): Promise<{reserved: number; remaining: number}> {
   return db.runTransaction(async (tx) => {
     const snapshot = await tx.get(userRef);
     const data = snapshot.data();
@@ -99,7 +100,7 @@ async function reserveDailyQuota(
       dailyCardCount: used + reserved,
       dailyCardCountDate: today,
     });
-    return reserved;
+    return {reserved, remaining: config.cards.dailyLimit - used - reserved};
   });
 }
 
@@ -162,7 +163,7 @@ export const generateCards = onCall(
 
     const userRef = db.collection("users").doc(userId);
     const day = todayKey();
-    const reserved = await reserveDailyQuota(userRef, count);
+    const {reserved, remaining} = await reserveDailyQuota(userRef, count);
 
     let generatedCards;
     try {
@@ -220,13 +221,15 @@ export const generateCards = onCall(
     }
 
     // Claude may return fewer cards than asked; don't charge for those.
-    await releaseDailyQuota(userRef, reserved - generatedCards.length, day);
+    const unused = reserved - generatedCards.length;
+    await releaseDailyQuota(userRef, unused, day);
 
     return {
       success: true,
       cardsGenerated: cards.length,
       message: `Generated ${cards.length} cards for ${interestId}`,
       cards,
+      remainingToday: remaining + unused,
     };
   },
 );

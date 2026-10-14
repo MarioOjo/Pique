@@ -17,7 +17,9 @@ export const config = {
   },
   cards: {
     batchSize: 5, // max cards generated per request
-    dailyLimit: 30, // max cards per user per day
+    // Max cards per user per day (3 sessions of 10). Higher on the local
+    // emulator so testing doesn't run out; real API calls still cost.
+    dailyLimit: process.env.FUNCTIONS_EMULATOR === "true" ? 300 : 30,
     expiryDays: 7, // days before a card can be re-served
   },
 } as const;

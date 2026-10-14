@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFreshCardsCountdown } from '@/components/feed/DoneForToday';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
@@ -8,6 +9,8 @@ interface SessionCompleteProps {
   cardsCompleted: number;
   topicsExplored: number;
   bestStreak: number;
+  // False after the last session of the day: no new session is offered.
+  moreToday: boolean;
   onStartNewSession: () => void;
   onViewProfile: () => void;
 }
@@ -25,12 +28,14 @@ export function SessionComplete({
   cardsCompleted,
   topicsExplored,
   bestStreak,
+  moreToday,
   onStartNewSession,
   onViewProfile,
 }: SessionCompleteProps) {
   const [frankMessage] = useState(
     () => FRANK_MESSAGES[Math.floor(Math.random() * FRANK_MESSAGES.length)],
   );
+  const wait = useFreshCardsCountdown();
 
   const stats = [
     { label: cardsCompleted === 1 ? 'card' : 'cards', value: cardsCompleted },
@@ -65,11 +70,22 @@ export function SessionComplete({
 
       <View style={styles.frankBox}>
         <Text style={styles.frankLabel}>FROM FRANK</Text>
-        <Text style={styles.frankMessage}>{frankMessage}</Text>
+        <Text style={styles.frankMessage}>
+          {moreToday ? frankMessage : 'That was your last session for today. Come back tomorrow to keep your streak going.'}
+        </Text>
       </View>
 
       <View style={styles.actions}>
-        <Button title="Start new session" variant="accent" onPress={onStartNewSession} />
+        {moreToday ? (
+          <Button title="Start new session" variant="accent" onPress={onStartNewSession} />
+        ) : (
+          <Text style={styles.doneForToday} accessibilityLiveRegion="polite">
+            {wait ? `🌙 Fresh cards in ${wait}` : 'Fresh cards are ready'}
+          </Text>
+        )}
+        {!moreToday && !wait && (
+          <Button title="Get today’s cards" variant="accent" onPress={onStartNewSession} />
+        )}
         <Pressable style={styles.link} onPress={onViewProfile} accessibilityRole="link">
           <Text style={styles.linkText}>View profile</Text>
         </Pressable>
@@ -153,6 +169,13 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: Theme.spacing.xs,
+  },
+  doneForToday: {
+    color: Colors.white,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.md,
+    textAlign: 'center',
+    paddingVertical: Theme.spacing.sm,
   },
   link: {
     minHeight: MIN_TOUCH_TARGET,
