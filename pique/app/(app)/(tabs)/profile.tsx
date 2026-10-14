@@ -130,7 +130,7 @@ export default function ProfileScreen() {
           {takesLoading ? (
             <ActivityIndicator color={Colors.violet} />
           ) : takes.length === 0 ? (
-            <Text style={styles.takesEmpty}>Your responses will appear here.</Text>
+            <Text style={styles.takesEmpty}>Nothing yet — complete your first card to see your takes here.</Text>
           ) : (
             <View style={styles.takes}>
               {takes.map((take, index) => (
@@ -140,7 +140,7 @@ export default function ProfileScreen() {
                     <Text style={styles.takeAction}>
                       {takeAction(take)} · {interestName(take.interestId)}
                     </Text>
-                    <Text style={styles.takeBody} numberOfLines={2}>
+                    <Text style={styles.takeBody} numberOfLines={2} ellipsizeMode="tail">
                       {take.body}
                     </Text>
                   </View>
