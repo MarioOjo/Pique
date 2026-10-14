@@ -41,7 +41,7 @@ export function TextField({ label, password = false, ...inputProps }: TextFieldP
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={EYE_ICON}
-              color={Colors.midGrey}
+              color={Colors.violet}
             />
           </Pressable>
         )}
