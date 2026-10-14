@@ -44,7 +44,7 @@ export default app;
 // In dev builds, talk to the Firebase emulators started with
 // `npx firebase-tools emulators:start` from pique/. Set
 // EXPO_PUBLIC_USE_EMULATORS=false in .env to use the real project instead.
-const useEmulators = __DEV__ && process.env.EXPO_PUBLIC_USE_EMULATORS !== 'false';
+export const useEmulators = __DEV__ && process.env.EXPO_PUBLIC_USE_EMULATORS !== 'false';
 
 // On a phone, "localhost" is the phone itself. Expo's hostUri is the dev
 // machine's address as seen by the device (e.g. 192.168.1.20:8081), so
