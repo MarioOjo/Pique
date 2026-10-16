@@ -320,7 +320,7 @@ export const scoreResponse = onCall(
         }
       }
     }
-    const {score, message} = result;
+    const {score, message, usedClaude} = result;
     const interestId = card ? String(card.interestId) : null;
     const userId = request.auth.uid;
 
@@ -344,6 +344,9 @@ export const scoreResponse = onCall(
       tx.update(interactionRef, {
         engagementScore: score,
         scoredAt: FieldValue.serverTimestamp(),
+        // Kept with the score as a record of why it was given.
+        scoreReason: message,
+        scoredBy: usedClaude ? "claude" : "precheck",
       });
       // Only interests the user chose have a weight to adjust.
       if (interestRef && interestSnap?.exists) {
