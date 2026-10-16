@@ -20,12 +20,25 @@ export interface RecentTake {
   // 'agree' / 'disagree' for perspective cards, the written answer for recall.
   responseText: string;
   body: string;
-  // Claude’s one-line reason for the score. Missing until the response is
-  // scored, and for answers a pre-check scored (those reasons are generic).
+  // Frank’s one-line reason for the score: Claude’s, or a fixed line for a
+  // pre-check such as gibberish. Missing until the response is scored.
   frankTake?: string;
 }
 
 const RECENT_TAKE_COUNT = 5;
+
+// Pre-check labels worth showing on a written answer, in Frank's words.
+// The others (skips, Agree/Disagree) never appear as written takes.
+const PRECHECK_TAKES: Record<string, string> = {
+  'Not a real answer': 'That didn’t look like a real answer.',
+  'Answered too quickly': 'That was quick. Give the next one a little more thought.',
+};
+
+function frankTakeFor(scoredBy: unknown, reason: unknown): string | undefined {
+  if (typeof reason !== 'string' || !reason) return undefined;
+  if (scoredBy === 'claude') return reason;
+  return PRECHECK_TAKES[reason];
+}
 
 // Looks up the card an interaction answered. Sample cards only exist in the
 // app, so they're found in MOCK_CARDS instead of Firestore.
@@ -79,10 +92,7 @@ export function useRecentTakes(userId: string | undefined): {
               cardType: card.type,
               responseText: String(interaction.get('responseText') ?? ''),
               body: card.body,
-              frankTake:
-                interaction.get("scoredBy") === "claude" && interaction.get("scoreReason")
-                  ? String(interaction.get("scoreReason"))
-                  : undefined,
+              frankTake: frankTakeFor(interaction.get('scoredBy'), interaction.get('scoreReason')),
             };
           }),
         );

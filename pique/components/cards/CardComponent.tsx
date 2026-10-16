@@ -3,6 +3,7 @@ import { Animated, Easing, Image, Pressable, Text, TextInput, View } from 'react
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
+import { looksLikeGibberish } from '@/lib/answerCheck';
 import { INTERESTS } from '@/lib/seedInterests';
 import { Theme } from '@/constants/theme';
 import { makeStyles, useTheme } from '@/hooks/useTheme';
@@ -87,6 +88,9 @@ export function CardComponent({
   const [responseText, setResponseText] = useState('');
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  // Set when Frank has queried an answer that looks like keyboard mashing.
+  // The button then reads "Send anyway", so a real answer is never stuck.
+  const [nudged, setNudged] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   // Picked once on mount, so they stay the same for this card.
   const [counterpointLabel] = useState(() => pickRandom(COUNTERPOINT_LABELS));
@@ -183,6 +187,10 @@ export function CardComponent({
   // after submitting.
   const handleSubmit = () => {
     if (!canSubmit || isSubmitting) return;
+    if (!isPerspective && !nudged && looksLikeGibberish(responseText)) {
+      setNudged(true);
+      return;
+    }
     setIsSubmitting(true);
     Animated.parallel([
       Animated.sequence([
@@ -296,7 +304,10 @@ export function CardComponent({
                   <TextInput
                     style={[styles.input, isFocused && styles.inputFocused]}
                     value={responseText}
-                    onChangeText={setResponseText}
+                    onChangeText={(text) => {
+                      setResponseText(text);
+                      setNudged(false);
+                    }}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Write your response..."
@@ -315,6 +326,11 @@ export function CardComponent({
                   >
                     {trimmedLength} / {MIN_RECALL_LENGTH} minimum
                   </Text>
+                  {nudged && !hasSubmitted && (
+                    <Text style={styles.nudge} accessibilityLiveRegion="polite">
+                      Frank can’t make sense of that. Try a sentence or two?
+                    </Text>
+                  )}
                 </View>
               )}
 
@@ -364,7 +380,7 @@ export function CardComponent({
                 </>
               ) : (
                 <Animated.View style={{ transform: [{ scale: submitScale }] }}>
-                  <Button title="Submit" onPress={handleSubmit} disabled={!canSubmit} />
+                  <Button title={nudged ? 'Send anyway' : 'Submit'} onPress={handleSubmit} disabled={!canSubmit} />
                 </Animated.View>
               )}
             </View>
@@ -543,6 +559,12 @@ const useStyles = makeStyles((c) => ({
   },
   counterMet: {
     color: c.accentText,
+  },
+  nudge: {
+    color: c.accentText,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    lineHeight: 18,
   },
   counterpoint: {
     backgroundColor: c.accentSoft,
