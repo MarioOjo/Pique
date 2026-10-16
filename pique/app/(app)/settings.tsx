@@ -22,6 +22,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme, type AppearancePreference } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { REMINDER_TIMES, useReminderPrefs } from '@/hooks/useReminderPrefs';
 import { useStats } from '@/hooks/useStats';
@@ -38,6 +39,8 @@ const APP_VERSION = Constants.expoConfig?.version ?? '1.0.0';
 const ALL_INTERESTS = Number.POSITIVE_INFINITY;
 
 export default function SettingsScreen() {
+  const styles = useStyles();
+  const { colors, preference, setPreference } = useTheme();
   const router = useRouter();
   const { user, piqueUser, signOut } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
@@ -160,7 +163,7 @@ export default function SettingsScreen() {
           accessibilityLabel="Back"
           hitSlop={Theme.spacing.sm}
         >
-          <Ionicons name="chevron-back" size={24} color={Colors.navy} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </Pressable>
         <Text style={styles.title} accessibilityRole="header">
           Settings
@@ -288,7 +291,7 @@ export default function SettingsScreen() {
                   <Text style={styles.rowValue} numberOfLines={1}>
                     {name}
                   </Text>
-                  <Ionicons name="pencil" size={16} color={Colors.midGrey} />
+                  <Ionicons name="pencil" size={16} color={colors.textSecondary} />
                 </View>
               </Pressable>
             )}
@@ -330,9 +333,9 @@ export default function SettingsScreen() {
               <Switch
                 value={reminder.enabled}
                 onValueChange={toggleReminder}
-                trackColor={{ false: Colors.borderGrey, true: Colors.violet }}
+                trackColor={{ false: colors.border, true: colors.accent }}
                 thumbColor={Colors.white}
-                ios_backgroundColor={Colors.borderGrey}
+                ios_backgroundColor={colors.border}
                 accessibilityLabel="Daily reminder"
               />
             </View>
@@ -374,7 +377,7 @@ export default function SettingsScreen() {
               accessibilityRole="button"
             >
               <Text style={styles.rowLabel}>Reset password</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.midGrey} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
             </Pressable>
             <View style={styles.divider} />
             <Pressable
@@ -385,7 +388,7 @@ export default function SettingsScreen() {
               accessibilityState={{ busy: signingOut, disabled: signingOut }}
             >
               <Text style={styles.dangerText}>Sign out</Text>
-              {signingOut && <ActivityIndicator color={Colors.danger} />}
+              {signingOut && <ActivityIndicator color={colors.danger} />}
             </Pressable>
             <View style={styles.divider} />
             <Pressable
@@ -397,7 +400,7 @@ export default function SettingsScreen() {
               accessibilityState={{ busy: deleting, disabled: deleting || signingOut }}
             >
               <Text style={styles.dangerText}>Delete account</Text>
-              {deleting && <ActivityIndicator color={Colors.danger} />}
+              {deleting && <ActivityIndicator color={colors.danger} />}
             </Pressable>
           </View>
 
@@ -423,6 +426,30 @@ export default function SettingsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>APP</Text>
             <View style={styles.row}>
+              <Text style={styles.rowLabel}>Appearance</Text>
+              <View style={styles.timeOptions} accessibilityRole="radiogroup">
+                {APPEARANCE_OPTIONS.map((option) => {
+                  const selected = preference === option.value;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      style={[styles.timePill, selected && styles.timePillSelected]}
+                      onPress={() => setPreference(option.value)}
+                      hitSlop={TIME_PILL_HIT_SLOP}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Appearance: ${option.label}`}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text style={[styles.timeText, selected && styles.timeTextSelected]}>
+                        {option.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
               <Text style={styles.rowLabel}>Version</Text>
               <Text style={styles.rowValue}>{APP_VERSION}</Text>
             </View>
@@ -438,14 +465,21 @@ export default function SettingsScreen() {
   );
 }
 
+// "System" follows the phone's light or dark setting.
+const APPEARANCE_OPTIONS: readonly { value: AppearancePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
+
 const SWATCH = 56;
 // Pills are 32pt tall; this extends their touch area to 44pt.
 const TIME_PILL_HIT_SLOP = { top: 6, bottom: 6 };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   flex: {
     flex: 1,
@@ -464,7 +498,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.lg,
   },
@@ -477,20 +511,20 @@ const styles = StyleSheet.create({
     paddingBottom: Theme.spacing.md,
   },
   privacyText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
     lineHeight: 19,
   },
   section: {
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     borderRadius: Theme.borderRadius.lg,
     paddingHorizontal: Theme.spacing.md,
     paddingTop: Theme.spacing.md,
     paddingBottom: Theme.spacing.xs,
   },
   sectionLabel: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xs,
     letterSpacing: 2,
@@ -502,7 +536,7 @@ const styles = StyleSheet.create({
     paddingVertical: Theme.spacing.sm,
   },
   avatarHint: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
@@ -540,15 +574,15 @@ const styles = StyleSheet.create({
     width: Theme.spacing.lg - Theme.spacing.xs, // 20
     height: Theme.spacing.lg - Theme.spacing.xs,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.violet,
-    borderColor: Colors.white,
+    backgroundColor: c.accent,
+    borderColor: c.surface,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
   },
   row: {
     minHeight: MIN_TOUCH_TARGET + Theme.spacing.sm,
@@ -558,7 +592,7 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.md,
   },
   rowLabel: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 15,
   },
@@ -567,7 +601,7 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.xs / 2,
   },
   rowSubtitle: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 12,
   },
@@ -579,20 +613,20 @@ const styles = StyleSheet.create({
     height: Theme.spacing.xl, // 32
     paddingHorizontal: Theme.spacing.sm + Theme.spacing.xs,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timePillSelected: {
-    backgroundColor: Colors.violet,
+    backgroundColor: c.accent,
   },
   timeText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
   timeTextSelected: {
-    color: Colors.white,
+    color: c.onPrimary,
   },
   rowValueGroup: {
     flexShrink: 1,
@@ -602,24 +636,24 @@ const styles = StyleSheet.create({
   },
   rowValue: {
     flexShrink: 1,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 15,
   },
   rowValueMuted: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
   },
   nameEdit: {
     paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
     gap: Theme.spacing.sm,
   },
   nameInput: {
-    borderColor: Colors.violet,
+    borderColor: c.accent,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
     paddingHorizontal: Theme.spacing.md,
     minHeight: MIN_TOUCH_TARGET,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
   },
@@ -634,7 +668,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
@@ -643,7 +677,7 @@ const styles = StyleSheet.create({
     minWidth: 88,
     paddingHorizontal: Theme.spacing.lg,
     borderRadius: Theme.borderRadius.md,
-    backgroundColor: Colors.navy,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -651,13 +685,13 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   saveText: {
-    color: Colors.white,
+    color: c.onPrimary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
   dangerText: {
-    color: Colors.danger,
+    color: c.danger,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 15,
   },
-});
+}));

@@ -1,18 +1,20 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { TextField } from '@/components/ui/TextField';
-import { authStyles } from '@/components/ui/authStyles';
-import { Colors } from '@/constants/colors';
+import { useAuthStyles } from '@/components/ui/authStyles';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 
 export default function LoginScreen() {
+  const styles = useStyles();
+  const authStyles = useAuthStyles();
   const { signIn } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -96,7 +98,7 @@ export default function LoginScreen() {
 // The text is about 20pt tall; this extends its touch area to 44pt.
 const FORGOT_HIT_SLOP = 12;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   forgot: {
     alignSelf: 'flex-end',
     marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the field
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   forgotText: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
@@ -117,11 +119,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
   },
   dividerText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
-});
+}));

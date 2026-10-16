@@ -1,17 +1,16 @@
-import { StyleSheet } from 'react-native';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 
-// Shared styles for the login and register screens.
-export const authStyles = StyleSheet.create({
+// Shared styles for the login, register and forgot-password screens.
+export const useAuthStyles = makeStyles((c) => ({
   heading: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xl,
     textAlign: 'center',
   },
   subheading: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     textAlign: 'center',
@@ -23,13 +22,13 @@ export const authStyles = StyleSheet.create({
     marginTop: Theme.spacing.sm,
   },
   footerText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
   link: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
-});
+}));

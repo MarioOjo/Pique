@@ -1,15 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -22,6 +12,7 @@ import { LogoMark } from '@/components/ui/LogoMark';
 import { WelcomeBanner } from '@/components/ui/WelcomeBanner';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { useCards } from '@/hooks/useCards';
 import { useStats } from '@/hooks/useStats';
@@ -31,6 +22,8 @@ const ENTRANCE_MS = 250;
 const MIN_TOUCH_TARGET = 44;
 
 export default function FeedScreen() {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const { user, piqueUser } = useAuth();
   const {
     currentCard,
@@ -88,7 +81,7 @@ export default function FeedScreen() {
     if (isLoading) {
       return (
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={Colors.violet} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={[styles.message, styles.loadingMessage]}>Frank is writing your cards…</Text>
         </View>
       );
@@ -188,7 +181,7 @@ export default function FeedScreen() {
               accessibilityRole="button"
               accessibilityLabel="Settings"
             >
-              <Ionicons name="settings-outline" size={22} color={Colors.white} />
+              <Ionicons name="settings-outline" size={22} color={colors.onHeader} />
             </Pressable>
           </View>
         </View>
@@ -202,16 +195,16 @@ export default function FeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   root: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   flex: {
     flex: 1,
   },
   header: {
-    backgroundColor: Colors.navy,
+    backgroundColor: c.header,
   },
   headerRow: {
     flexDirection: 'row',
@@ -238,7 +231,7 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   brandText: {
-    color: Colors.white,
+    color: c.onHeader,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.lg,
   },
@@ -261,14 +254,14 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: Colors.violet,
+    backgroundColor: c.accent,
   },
   progressText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 12,
     textAlign: 'center',
@@ -287,7 +280,7 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   message: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     textAlign: 'center',
@@ -296,4 +289,4 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: Theme.spacing.md,
   },
-});
+}));

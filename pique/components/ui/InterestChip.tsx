@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { useTheme } from '@/hooks/useTheme';
 import type { Interest } from '@/types';
 
 interface InterestChipProps {
@@ -13,6 +13,7 @@ interface InterestChipProps {
 const TRANSITION_MS = 180;
 
 export function InterestChip({ interest, selected, onToggle }: InterestChipProps) {
+  const { colors } = useTheme();
   const [progress] = useState(() => new Animated.Value(selected ? 1 : 0));
 
   useEffect(() => {
@@ -29,17 +30,17 @@ export function InterestChip({ interest, selected, onToggle }: InterestChipProps
   const animatedChip = {
     backgroundColor: progress.interpolate({
       inputRange: [0, 1],
-      outputRange: [Colors.white, Colors.violet],
+      outputRange: [colors.surface, colors.accent],
     }),
     borderColor: progress.interpolate({
       inputRange: [0, 1],
-      outputRange: [Colors.borderGrey, Colors.violet],
+      outputRange: [colors.border, colors.accent],
     }),
   };
   const animatedLabel = {
     color: progress.interpolate({
       inputRange: [0, 1],
-      outputRange: [Colors.navy, Colors.white],
+      outputRange: [colors.text, colors.onPrimary],
     }),
   };
 

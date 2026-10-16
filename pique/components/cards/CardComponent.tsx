@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Easing, Image, Pressable, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { INTERESTS } from '@/lib/seedInterests';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 import type { Card } from '@/types';
 
 interface CardComponentProps {
@@ -77,6 +78,8 @@ export function CardComponent({
   cardNumber,
   totalCards,
 }: CardComponentProps) {
+  const styles = useStyles();
+  const { colors } = useTheme();
   // Lazy initial state runs once, when the card mounts.
   const [startTime] = useState(() => Date.now());
   const [selectedChoice, setSelectedChoice] = useState<Choice | null>(null);
@@ -226,7 +229,7 @@ export function CardComponent({
   const surfaceBorder = {
     borderColor: borderFlash.interpolate({
       inputRange: [0, 1],
-      outputRange: [Colors.borderGrey, Colors.violet],
+      outputRange: [colors.border, colors.accent],
     }),
   };
 
@@ -296,7 +299,7 @@ export function CardComponent({
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Write your response..."
-                    placeholderTextColor={Colors.midGrey}
+                    placeholderTextColor={colors.textSecondary}
                     multiline
                     maxLength={2000}
                     textAlignVertical="top"
@@ -391,11 +394,12 @@ export function CardComponent({
   );
 }
 
+const CREDIT_TEXT = Colors.white;
 const CONTENT_PADDING = Theme.spacing.md + Theme.spacing.xs; // 20
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   surface: {
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     // Colour is animated: it flashes violet on submit.
     borderWidth: 1,
     borderRadius: Theme.borderRadius.lg,
@@ -413,19 +417,19 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: 200,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
   },
   topicBadge: {
     position: 'absolute',
     top: Theme.spacing.md,
     left: Theme.spacing.md,
-    backgroundColor: Colors.violet,
+    backgroundColor: c.accent,
     borderRadius: Theme.borderRadius.full,
     paddingHorizontal: Theme.spacing.sm + Theme.spacing.xs,
     paddingVertical: Theme.spacing.xs,
   },
   topicText: {
-    color: Colors.white,
+    color: c.onPrimary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 12,
   },
@@ -439,7 +443,7 @@ const styles = StyleSheet.create({
     paddingVertical: Theme.spacing.xs / 2,
   },
   creditText: {
-    color: Colors.white,
+    color: CREDIT_TEXT,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.xs,
   },
@@ -447,20 +451,20 @@ const styles = StyleSheet.create({
     padding: CONTENT_PADDING,
   },
   typeLabel: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xs,
     letterSpacing: 2,
     marginBottom: Theme.spacing.sm,
   },
   body: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 18,
     lineHeight: 26,
   },
   prompt: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     marginTop: Theme.spacing.sm,
@@ -480,23 +484,23 @@ const styles = StyleSheet.create({
     minHeight: MIN_TOUCH_TARGET,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderColor: Colors.borderGrey,
+    backgroundColor: c.surface,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
     paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
   },
   choiceSelected: {
-    backgroundColor: Colors.navy,
-    borderColor: Colors.navy,
+    backgroundColor: c.primary,
+    borderColor: c.primary,
   },
   choiceText: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
   choiceTextSelected: {
-    color: Colors.white,
+    color: c.onPrimary,
   },
   recall: {
     gap: Theme.spacing.xs,
@@ -505,47 +509,47 @@ const styles = StyleSheet.create({
     minHeight: 80,
     // Scrolls inside rather than pushing the card down as the answer grows.
     maxHeight: 120,
-    borderColor: Colors.borderGrey,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
     padding: Theme.spacing.sm + Theme.spacing.xs,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
   },
   inputFocused: {
-    borderColor: Colors.violet,
+    borderColor: c.accent,
   },
   counter: {
     alignSelf: 'flex-end',
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 12,
   },
   counterMet: {
-    color: Colors.violet,
+    color: c.accentText,
   },
   counterpoint: {
-    backgroundColor: Colors.lightViolet,
-    borderLeftColor: Colors.violet,
+    backgroundColor: c.accentSoft,
+    borderLeftColor: c.accent,
     borderLeftWidth: 3,
     borderRadius: Theme.borderRadius.sm,
     padding: Theme.spacing.md,
     gap: Theme.spacing.xs,
   },
   counterpointLabel: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xs,
   },
   counterpointText: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     lineHeight: 20,
   },
   acknowledgement: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
     fontStyle: 'italic',
@@ -557,7 +561,7 @@ const styles = StyleSheet.create({
     marginTop: Theme.spacing.xs, // 20 below Frank's line; parent gap is 16
   },
   viewShiftQuestion: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 15,
     marginBottom: Theme.spacing.sm + Theme.spacing.xs,
@@ -572,23 +576,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderColor: Colors.borderGrey,
+    borderColor: c.border,
     borderWidth: 1.5,
     borderRadius: Theme.borderRadius.full,
   },
   pillSelected: {
-    backgroundColor: Colors.navy,
+    backgroundColor: c.primary,
   },
   pillText: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 14,
   },
   pillTextSelected: {
-    color: Colors.white,
+    color: c.onPrimary,
   },
   viewShiftFeedback: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
     marginTop: Theme.spacing.sm,
@@ -598,7 +602,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
-    borderColor: Colors.borderGrey,
+    borderColor: c.border,
     borderWidth: 1.5,
     borderRadius: 14,
     marginTop: Theme.spacing.sm + Theme.spacing.xs, // 12
@@ -607,15 +611,15 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   skipNote: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 12,
     fontStyle: 'italic',
     textAlign: 'center',
   },
   skipText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 14,
   },
-});
+}));
