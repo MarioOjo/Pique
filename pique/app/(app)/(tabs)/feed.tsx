@@ -20,6 +20,8 @@ import { useStats } from '@/hooks/useStats';
 const ENTRANCE_OFFSET = 300;
 const ENTRANCE_MS = 250;
 const MIN_TOUCH_TARGET = 44;
+// Long enough to read the slow-down nudge.
+const SLOW_DOWN_MS = 4000;
 
 export default function FeedScreen() {
   const styles = useStyles();
@@ -40,6 +42,7 @@ export default function FeedScreen() {
     usingFallbackCards,
     outOfCardsToday,
     moreCardsToday,
+    slowDownNudges,
   } = useCards();
   // Live, so the header and session summary update as soon as updateStats runs.
   const { stats } = useStats(user?.uid);
@@ -195,6 +198,14 @@ export default function FeedScreen() {
       <View style={styles.flex}>
         {renderBody()}
         {piqueUser?.name && <WelcomeBanner message={`Welcome back, ${piqueUser.name}!`} />}
+        {/* Keyed by count, so each nudge remounts and plays again. */}
+        {slowDownNudges > 0 && (
+          <WelcomeBanner
+            key={slowDownNudges}
+            message="You’re flying through these. Frank’s cards land better when you read them."
+            durationMs={SLOW_DOWN_MS}
+          />
+        )}
       </View>
     </View>
   );

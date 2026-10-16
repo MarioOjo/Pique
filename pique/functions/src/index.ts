@@ -292,6 +292,9 @@ export const scoreResponse = onCall(
       responseText: String(interaction.responseText ?? ""),
       timeOnCard: Number(interaction.timeOnCard ?? 0),
       skipped: interaction.skipped === true,
+      cardText: card ?
+        `${String(card.body ?? "")} ${String(card.prompt ?? "")}` :
+        undefined,
     };
 
     // Pre-checks first: they save a Claude call when the score is obvious.
