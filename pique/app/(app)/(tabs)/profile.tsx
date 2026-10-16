@@ -98,7 +98,7 @@ export default function ProfileScreen() {
           {interestsLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : interests.length === 0 ? (
-            <Text style={styles.empty}>No topics yet.</Text>
+            <Text style={styles.empty}>Your top topics will show here once you answer a few cards.</Text>
           ) : (
             interests.map((interest, index) => {
               const rank = index + 1;
@@ -133,7 +133,7 @@ export default function ProfileScreen() {
           {takesLoading ? (
             <ActivityIndicator color={colors.accent} />
           ) : takes.length === 0 ? (
-            <Text style={styles.takesEmpty}>Nothing yet — complete your first card to see your takes here.</Text>
+            <Text style={styles.empty}>Nothing yet. Answer your first card and your takes will show here.</Text>
           ) : (
             <View style={styles.takes}>
               {takes.map((take, index) => (
@@ -265,6 +265,7 @@ const useStyles = makeStyles((c) => ({
     color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
+    lineHeight: 20,
   },
   topic: {
     gap: Theme.spacing.sm,
@@ -300,12 +301,6 @@ const useStyles = makeStyles((c) => ({
     height: '100%',
     backgroundColor: c.accent,
     borderRadius: 2,
-  },
-  takesEmpty: {
-    color: c.textSecondary,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: 14,
-    textAlign: 'center',
   },
   // One card for the whole list, with dividers between the takes.
   takes: {
