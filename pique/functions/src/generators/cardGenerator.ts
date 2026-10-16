@@ -21,6 +21,78 @@ export const INTEREST_NAMES: Record<string, string> = {
   "history": "History",
 };
 
+// Onboarding answers that shape Frank's cards. Keep the keys in sync with
+// the app's lib/onboarding.ts and firestore.rules. Every line that reaches
+// the prompt comes from these server-side tables, never from the user's
+// document directly, so a stored answer can't inject instructions.
+const AGE_CONTEXT: Record<string, string> = {
+  "18-24": "The user is 18–24 — pitch references and examples to match.",
+  "25-34": "The user is 25–34 — pitch references and examples to match.",
+  "35-44": "The user is 35–44 — pitch references and examples to match.",
+  "45+": "The user is 45 or older — pitch references and examples to match.",
+};
+
+const WHY_CONTEXT: Record<string, string> = {
+  "sharpen": "The user wants to sharpen their thinking — favour " +
+    "perspective cards that demand a clear stance, with genuinely strong " +
+    "counterpoints.",
+  "learn": "The user is here to learn — favour recall cards that build " +
+    "real, memorable knowledge.",
+  "sides": "The user wants to hear other perspectives — emphasise " +
+    "less-heard views and surprising counterpoints.",
+  "switch-off": "The user is replacing mindless scrolling — keep the tone " +
+    "approachable and difficulty moderate; nothing that feels like homework.",
+};
+
+// 1 = back me up, 5 = push back hard.
+const STYLE_CONTEXT: Record<number, string> = {
+  1: "The user wants support — lead with affirming ideas and keep " +
+    "counterpoints gentle.",
+  2: "The user leans towards agreement — present ideas warmly with only " +
+    "light challenge.",
+  3: "The user wants balance — give both sides equal weight.",
+  4: "The user wants to be pushed — include sharp counterpoints.",
+  5: "The user wants maximum pushback — be genuinely challenging and " +
+    "question assumptions directly.",
+};
+
+const STYLE_DIFFICULTY: Record<number, string> = {
+  1: "Lean towards difficulty 1–3.",
+  2: "Lean towards difficulty 1–3.",
+  4: "Lean towards difficulty 3–5.",
+  5: "Lean towards difficulty 4–5.",
+};
+
+// The user's onboarding answers, each one known to the tables above.
+export interface UserProfile {
+  ageBand?: string;
+  whyHere?: string;
+  frankStyle?: number;
+}
+
+/**
+ * Picks the known onboarding answers out of a user document. Unknown or
+ * missing answers are left out, so Frank falls back to his defaults.
+ * @param {Record<string, unknown>} data The users/{uid} document data.
+ * @return {UserProfile} The answers Frank can use.
+ */
+export function toUserProfile(data: Record<string, unknown>): UserProfile {
+  const profile: UserProfile = {};
+  if (typeof data.ageBand === "string" && data.ageBand in AGE_CONTEXT) {
+    profile.ageBand = data.ageBand;
+  }
+  if (typeof data.whyHere === "string" && data.whyHere in WHY_CONTEXT) {
+    profile.whyHere = data.whyHere;
+  }
+  if (
+    typeof data.frankStyle === "number" &&
+    data.frankStyle in STYLE_CONTEXT
+  ) {
+    profile.frankStyle = data.frankStyle;
+  }
+  return profile;
+}
+
 // Structured outputs constrain Claude's reply to this schema, so the
 // response is always parseable JSON in this exact shape.
 const CardSchema = z.object({
@@ -39,14 +111,25 @@ const CardBatchSchema = z.object({
 
 /**
  * Builds the system prompt for Frank, Pique's AI persona.
+ * @param {UserProfile} profile The user's onboarding answers.
  * @return {string} The system prompt.
  */
-function buildSystemPrompt(): string {
+function buildSystemPrompt(profile: UserProfile): string {
+  const context: string[] = [];
+  if (profile.ageBand) context.push(AGE_CONTEXT[profile.ageBand]);
+  if (profile.whyHere) context.push(WHY_CONTEXT[profile.whyHere]);
+  if (profile.frankStyle !== undefined) {
+    context.push(STYLE_CONTEXT[profile.frankStyle]);
+  }
+  const contextBlock = context.length > 0 ?
+    `\nAbout this user:\n${context.map((line) => `- ${line}`).join("\n")}\n` :
+    "";
+
   return `You are Frank, the AI behind Pique — an app that replaces
 passive social media scrolling with content that requires genuine
 thought. Your job is to generate content cards that make people stop
-and actually think.
-
+and actually think. Pique's users are adults (18+).
+${contextBlock}
 Rules for every card you generate:
 - Be genuinely thought-provoking, not generic or safe
 - Use clear, accessible language — no jargon
@@ -62,9 +145,19 @@ Rules for every card you generate:
  * Builds the user prompt for a specific interest and card count.
  * @param {string} interestName Display name of the interest.
  * @param {number} count Number of cards to generate.
+ * @param {UserProfile} profile The user's onboarding answers.
  * @return {string} The user prompt.
  */
-function buildUserPrompt(interestName: string, count: number): string {
+function buildUserPrompt(
+  interestName: string,
+  count: number,
+  profile: UserProfile,
+): string {
+  const difficulty =
+    (profile.frankStyle !== undefined &&
+      STYLE_DIFFICULTY[profile.frankStyle]) ||
+    "Vary difficulty across the batch.";
+
   return `Generate exactly ${count} content cards about ${interestName}.
 
 For each card:
@@ -76,7 +169,7 @@ For each card:
 - difficulty: an integer from 1 to 5
 
 Mix card types — aim for roughly half perspective, half recall.
-Vary difficulty across the batch.
+${difficulty}
 Make each card genuinely different in topic and angle.`;
 }
 
@@ -105,11 +198,13 @@ function toGeneratedCard(card: ParsedCard): GeneratedCard {
  * Generates cards for one interest using Claude.
  * @param {string} interestId One of the keys of INTEREST_NAMES.
  * @param {number} count Number of cards to generate.
+ * @param {UserProfile} profile The user's onboarding answers, if any.
  * @return {Promise<GeneratedCard[]>} The generated cards.
  */
 export async function generateCardsForInterest(
   interestId: string,
   count: number,
+  profile: UserProfile = {},
 ): Promise<GeneratedCard[]> {
   const interestName = INTEREST_NAMES[interestId];
   if (!interestName) throw new Error(`Unknown interest: ${interestId}`);
@@ -117,9 +212,9 @@ export async function generateCardsForInterest(
   const response = await getAnthropicClient().messages.parse({
     model: config.anthropic.model,
     max_tokens: config.anthropic.maxTokens,
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt(profile),
     messages: [
-      {role: "user", content: buildUserPrompt(interestName, count)},
+      {role: "user", content: buildUserPrompt(interestName, count, profile)},
     ],
     output_config: {format: zodOutputFormat(CardBatchSchema)},
   });

@@ -10,6 +10,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import { SplashAnimation } from '@/components/ui/SplashAnimation';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { ONBOARDING_ROUTES } from '@/lib/onboarding';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -26,12 +27,16 @@ function RootNavigator() {
 
     const inAuthGroup = segments[0] === '(auth)';
     const onFrankIntro = pathname === '/frank-intro';
-    const onOnboarding = pathname === '/onboarding';
+    // Any of the question screens between the intro and the feed. Each one
+    // moves on to the next itself.
+    const onOnboarding = (ONBOARDING_ROUTES as readonly string[]).includes(pathname);
     const inMainApp = segments[0] === '(app)' && !onOnboarding && !onFrankIntro;
     // Opened from login and from Settings, so it's allowed signed in or out.
     const onForgotPassword = pathname === '/forgot-password';
 
-    // Every step uses replace, so back never returns to a finished step.
+    // Redirects use replace, so back never returns to a finished stage. Within
+    // onboarding the question screens push, so answers can be changed with
+    // back until the summary completes it.
     // The intro only applies before onboarding: users who onboarded before
     // it existed (no frankIntroSeen field) go straight to the feed.
     if (onForgotPassword) {
@@ -41,7 +46,7 @@ function RootNavigator() {
     } else if (!piqueUser?.onboardingComplete && !piqueUser?.frankIntroSeen) {
       if (!onFrankIntro) router.replace('/frank-intro');
     } else if (!piqueUser?.onboardingComplete) {
-      if (!onOnboarding) router.replace('/onboarding');
+      if (!onOnboarding) router.replace(ONBOARDING_ROUTES[0]);
     } else if (!inMainApp) {
       router.replace('/feed');
     }

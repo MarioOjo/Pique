@@ -20,14 +20,14 @@ import { ProgressDots } from '@/components/ui/ProgressDots';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { SESSION_SIZE } from '@/hooks/useCards';
 import { db } from '@/lib/firebase';
+import { ONBOARDING_STEPS, STEP } from '@/lib/onboarding';
 
 // Page 1: what Pique is and how it works.
 const HOW_IT_WORKS = [
   { icon: '🃏', text: 'A card shows up: a question, a fact or a hot take.' },
   { icon: '💬', text: 'You answer before you move on. That’s the only rule.' },
-  { icon: '🏁', text: `${SESSION_SIZE} cards and the session ends. No bottomless feed.` },
+  { icon: '🏁', text: 'A set number of cards, then the session ends. No bottomless feed.' },
 ] as const;
 
 // Page 2: who Frank is and what he does.
@@ -36,9 +36,6 @@ const FRANK_DOES = [
   { icon: '👂', text: 'Reads your answers. Honest beats clever, every time.' },
   { icon: '🔁', text: 'Learns from each one, so tomorrow’s cards fit you better.' },
 ] as const;
-
-// Onboarding is three steps: these two pages, then picking topics.
-const ONBOARDING_STEPS = 3;
 
 const LOGO_FADE_MS = 600;
 const PAGE_OUT_MS = 180;
@@ -221,7 +218,7 @@ export default function FrankIntroScreen() {
         <View style={styles.footer}>
           <ProgressDots
             total={ONBOARDING_STEPS}
-            current={page === 'app' ? 1 : 2}
+            current={page === 'app' ? STEP.introApp : STEP.introFrank}
             color={Colors.amber}
           />
           {error && <Text style={styles.error}>{error}</Text>}

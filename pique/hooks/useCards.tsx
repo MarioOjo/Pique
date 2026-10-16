@@ -1,14 +1,13 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FirebaseError } from 'firebase/app';
 import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { generateCards, scoreResponse, updateStats } from '@/lib/claude';
 import { db } from '@/lib/firebase';
+import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
 // Fallback only, for when card generation fails.
 import { MOCK_CARDS } from '@/lib/mockCards';
 import type { Card, UserInterest } from '@/types';
-
-export const SESSION_SIZE = 10;
 
 interface UseCardsResult {
   currentCard: Card | null;
@@ -70,11 +69,14 @@ const isDailyLimitError = (reason: unknown) =>
 
 // Generates a session's worth of cards across the user's top interests,
 // in parallel. Interests whose generation fails are left out.
-async function generateSessionCards(userId: string): Promise<GeneratedSession> {
+async function generateSessionCards(
+  userId: string,
+  sessionSize: number,
+): Promise<GeneratedSession> {
   const interests = await getTopInterests(userId);
   if (interests.length === 0) return { cards: [], limitReached: false, remainingToday: null };
 
-  const counts = distributeCards(SESSION_SIZE, interests.length);
+  const counts = distributeCards(sessionSize, interests.length);
   const results = await Promise.allSettled(
     interests.map((interest, i) => generateCards(userId, interest.interestId, counts[i])),
   );
@@ -112,7 +114,15 @@ function shuffle<T>(items: readonly T[]): T[] {
 }
 
 export function useCards(): UseCardsResult {
-  const { user } = useAuth();
+  const { user, piqueUser } = useAuth();
+  // Chosen during onboarding; older accounts get the default. Read through a
+  // ref so a profile update doesn't change loadCards and trigger a second,
+  // quota-using generation.
+  const sessionSize = piqueUser?.sessionSize ?? DEFAULT_SESSION_SIZE;
+  const sessionSizeRef = useRef(sessionSize);
+  useEffect(() => {
+    sessionSizeRef.current = sessionSize;
+  }, [sessionSize]);
   const [sessionCards, setSessionCards] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [engagedCount, setEngagedCount] = useState(0);
@@ -130,7 +140,7 @@ export function useCards(): UseCardsResult {
     setError(null);
     try {
       const session = user
-        ? await generateSessionCards(user.uid)
+        ? await generateSessionCards(user.uid, sessionSizeRef.current)
         : { cards: [], limitReached: false, remainingToday: null };
       setRemainingToday(session.remainingToday);
       setOutOfCardsToday(session.limitReached);
@@ -141,7 +151,7 @@ export function useCards(): UseCardsResult {
         console.warn('No generated cards available; using sample cards');
         cards = [...MOCK_CARDS];
       }
-      setSessionCards(shuffle(cards).slice(0, SESSION_SIZE));
+      setSessionCards(shuffle(cards).slice(0, sessionSizeRef.current));
       setUsingFallbackCards(fallback);
       setCurrentIndex(0);
       setEngagedCount(0);
