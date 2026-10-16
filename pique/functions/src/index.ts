@@ -12,7 +12,9 @@ import {
 import {anthropicApiKey, config} from "./config";
 import {
   INTEREST_NAMES,
+  UserProfile,
   generateCardsForInterest,
+  toUserProfile,
 } from "./generators/cardGenerator";
 import {
   ScoreResult,
@@ -73,13 +75,15 @@ function todayKey(): string {
  * allowance, so concurrent calls can't both slip under the limit.
  * @param {DocumentReference} userRef The user's profile document.
  * @param {number} requested Number of cards the caller asked for.
- * @return {Promise<{reserved: number, remaining: number}>} How many cards
- *   were reserved, and how many are left today after this reservation.
+ * @return {Promise<{reserved: number, remaining: number,
+ *   profile: UserProfile}>} How many cards were reserved, how many are left
+ *   today after this reservation, and the user's onboarding answers (read
+ *   in the same transaction, to save a second read).
  */
 async function reserveDailyQuota(
   userRef: DocumentReference,
   requested: number,
-): Promise<{reserved: number; remaining: number}> {
+): Promise<{reserved: number; remaining: number; profile: UserProfile}> {
   return db.runTransaction(async (tx) => {
     const snapshot = await tx.get(userRef);
     const data = snapshot.data();
@@ -100,7 +104,11 @@ async function reserveDailyQuota(
       dailyCardCount: used + reserved,
       dailyCardCountDate: today,
     });
-    return {reserved, remaining: config.cards.dailyLimit - used - reserved};
+    return {
+      reserved,
+      remaining: config.cards.dailyLimit - used - reserved,
+      profile: toUserProfile(data),
+    };
   });
 }
 
@@ -163,11 +171,13 @@ export const generateCards = onCall(
 
     const userRef = db.collection("users").doc(userId);
     const day = todayKey();
-    const {reserved, remaining} = await reserveDailyQuota(userRef, count);
+    const {reserved, remaining, profile} =
+      await reserveDailyQuota(userRef, count);
 
     let generatedCards;
     try {
-      generatedCards = await generateCardsForInterest(interestId, reserved);
+      generatedCards =
+        await generateCardsForInterest(interestId, reserved, profile);
     } catch (error) {
       await releaseDailyQuota(userRef, reserved, day);
       logger.error("Card generation failed", {

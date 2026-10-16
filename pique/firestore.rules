@@ -21,6 +21,24 @@ service cloud.firestore {
                        'psychology', 'economics', 'art', 'politics'];
     }
 
+    // Onboarding answers. Keep in sync with lib/onboarding.ts; these values
+    // reach Frank's prompt, so only the known options are allowed.
+    function validAgeBand(value) {
+      return value in ['18-24', '25-34', '35-44', '45+'];
+    }
+
+    function validWhyHere(value) {
+      return value in ['sharpen', 'learn', 'sides', 'switch-off'];
+    }
+
+    function validFrankStyle(value) {
+      return value is int && value >= 1 && value <= 5;
+    }
+
+    function validSessionSize(value) {
+      return value in [5, 10, 15];
+    }
+
     function validName(value) {
       return value is string && value.size() > 0 && value.size() <= 50;
     }
@@ -44,9 +62,14 @@ service cloud.firestore {
       allow update: if isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['name', 'onboardingComplete', 'frankIntroSeen',
-                       'avatarId'])
+                       'avatarId', 'ageBand', 'whyHere', 'frankStyle',
+                       'sessionSize'])
         && (!changed('name') || validName(request.resource.data.name))
-        && (!changed('avatarId') || validAvatarId(request.resource.data.avatarId));
+        && (!changed('avatarId') || validAvatarId(request.resource.data.avatarId))
+        && (!changed('ageBand') || validAgeBand(request.resource.data.ageBand))
+        && (!changed('whyHere') || validWhyHere(request.resource.data.whyHere))
+        && (!changed('frankStyle') || validFrankStyle(request.resource.data.frankStyle))
+        && (!changed('sessionSize') || validSessionSize(request.resource.data.sessionSize));
       allow delete: if false;
 
       // Picked during onboarding at weight 1.0. After that, weights are
