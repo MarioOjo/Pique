@@ -64,3 +64,16 @@ export function looksLikeGibberish(text: string): boolean {
   const hasCommonWord = words.some((word) => COMMON_WORDS.has(word));
   return !hasCommonWord && nonsense > 0;
 }
+
+// Under the time it takes to skim the card, the user can't have read it.
+// About 7 words a second is fast skimming; the limit stays between 3 and 12
+// seconds. A copy of minReadingTimeMs in functions/src/scoring/responseScorer.ts.
+const SKIM_WORDS_PER_SECOND = 7;
+const MIN_READING_MS = 3000;
+const MAX_READING_MS = 12000;
+
+export function minReadingTimeMs(cardText: string): number {
+  const words = cardText.trim().split(/\s+/).filter(Boolean).length;
+  const ms = Math.round((words / SKIM_WORDS_PER_SECOND) * 1000);
+  return Math.min(MAX_READING_MS, Math.max(MIN_READING_MS, ms));
+}

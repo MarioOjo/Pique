@@ -111,6 +111,9 @@ export function CardComponent({
   const [viewShiftOpacity] = useState(() => new Animated.Value(0));
   // Guards against a double tap reporting the same card twice.
   const isDone = useRef(false);
+  // Time from the card appearing to the Submit tap. Reading the
+  // counterpoint afterwards doesn't count towards it.
+  const answerTime = useRef(0);
   const skipAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   // Don't leave the skip timer running if the card unmounts mid-way.
@@ -152,15 +155,11 @@ export function CardComponent({
   const isLocked = hasSubmitted || isSkipping;
   const showImage = Boolean(card.imageUrl) && !imageFailed;
 
-  const finish = (report: (elapsed: number) => void) => {
+  const handleNext = () => {
     if (isDone.current) return;
     isDone.current = true;
-    report(Date.now() - startTime);
-  };
-
-  const handleNext = () => {
     const text = isPerspective ? (selectedChoice ?? '') : responseText.trim();
-    finish((elapsed) => onSubmit(text, elapsed));
+    onSubmit(text, answerTime.current);
   };
 
   // Shows "Skipped — Frank noticed." for 2s, fades it, then advances. Time
@@ -191,6 +190,7 @@ export function CardComponent({
       setNudged(true);
       return;
     }
+    answerTime.current = Date.now() - startTime;
     setIsSubmitting(true);
     Animated.parallel([
       Animated.sequence([

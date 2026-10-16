@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FirebaseError } from 'firebase/app';
 import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
+import { minReadingTimeMs } from '@/lib/answerCheck';
 import { generateCards, scoreResponse, updateStats } from '@/lib/claude';
 import { db } from '@/lib/firebase';
 import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
@@ -28,9 +29,14 @@ interface UseCardsResult {
   outOfCardsToday: boolean;
   // False once the last session of the day has been handed out.
   moreCardsToday: boolean;
+  // Goes up by one each time the user answers several cards in a row too
+  // quickly to have read them, so the feed can ask them to slow down.
+  slowDownNudges: number;
 }
 
 const TOP_INTEREST_COUNT = 3;
+// Too-quick answers in a row before Frank asks the user to slow down.
+const QUICK_ANSWERS_BEFORE_NUDGE = 3;
 // generateCards accepts at most this many cards per call.
 const MAX_CARDS_PER_CALL = 5;
 
@@ -134,6 +140,8 @@ export function useCards(): UseCardsResult {
   // Mirrors currentIndex so a double tap can't record or advance twice
   // before React re-renders.
   const indexRef = useRef(0);
+  const quickAnswersInARow = useRef(0);
+  const [slowDownNudges, setSlowDownNudges] = useState(0);
 
   const loadCards = useCallback(async () => {
     setIsLoading(true);
@@ -156,6 +164,7 @@ export function useCards(): UseCardsResult {
       setCurrentIndex(0);
       setEngagedCount(0);
       indexRef.current = 0;
+      quickAnswersInARow.current = 0;
     } catch (e) {
       console.warn('Failed to load cards', e);
       setError('Check your connection and try again.');
@@ -176,7 +185,17 @@ export function useCards(): UseCardsResult {
 
       indexRef.current = index + 1;
       setCurrentIndex(index + 1);
-      if (!skipped) setEngagedCount((count) => count + 1);
+      if (!skipped) {
+        setEngagedCount((count) => count + 1);
+        // The same limit the server scores against. Skips don't count
+        // either way.
+        const quick = timeOnCard < minReadingTimeMs(`${card.body} ${card.prompt}`);
+        quickAnswersInARow.current = quick ? quickAnswersInARow.current + 1 : 0;
+        if (quickAnswersInARow.current >= QUICK_ANSWERS_BEFORE_NUDGE) {
+          quickAnswersInARow.current = 0;
+          setSlowDownNudges((count) => count + 1);
+        }
+      }
 
       if (!user) return;
       let interactionId: string;
@@ -241,5 +260,6 @@ export function useCards(): UseCardsResult {
     usingFallbackCards,
     outOfCardsToday,
     moreCardsToday: remainingToday === null || remainingToday > 0,
+    slowDownNudges,
   };
 }

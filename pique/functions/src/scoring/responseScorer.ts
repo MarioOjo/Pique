@@ -15,12 +15,35 @@ export interface ScoreResult {
 
 interface ScoreInput {
   responseText: string;
+  // From the card appearing to the Submit tap, in milliseconds.
   timeOnCard: number;
   skipped: boolean;
+  // The card's body and prompt, to set the reading time. Missing for
+  // sample cards, which aren't stored.
+  cardText?: string;
 }
 
 const MIN_RESPONSE_LENGTH = 10;
-const MIN_TIME_ON_CARD_MS = 5000;
+// Under the time it takes to skim the card, the user can't have read it.
+// About 7 words a second is fast skimming; the limit stays between 3 and 12
+// seconds. Mirrors minReadingTimeMs in the app's lib/answerCheck.ts.
+const SKIM_WORDS_PER_SECOND = 7;
+const MIN_READING_MS = 3000;
+const MAX_READING_MS = 12000;
+// For cards whose text isn't known.
+const DEFAULT_READING_MS = 5000;
+
+/**
+ * The least time a user can spend on a card and still have read it.
+ * @param {string | undefined} cardText The card's body and prompt.
+ * @return {number} Milliseconds.
+ */
+export function minReadingTimeMs(cardText: string | undefined): number {
+  if (!cardText) return DEFAULT_READING_MS;
+  const words = cardText.trim().split(/\s+/).filter(Boolean).length;
+  const ms = Math.round((words / SKIM_WORDS_PER_SECOND) * 1000);
+  return Math.min(MAX_READING_MS, Math.max(MIN_READING_MS, ms));
+}
 
 // Perspective cards record the Agree/Disagree choice as the response.
 const PERSPECTIVE_CHOICES = new Set(["agree", "disagree"]);
@@ -43,12 +66,13 @@ const MAX_REASON_LENGTH = 200;
  */
 export function preScore(input: ScoreInput): ScoreResult | null {
   const text = input.responseText.trim();
+  const tooQuick = input.timeOnCard < minReadingTimeMs(input.cardText);
 
   if (input.skipped) {
     return {score: 0, message: "Card skipped", usedClaude: false};
   }
   if (PERSPECTIVE_CHOICES.has(text.toLowerCase())) {
-    return input.timeOnCard < MIN_TIME_ON_CARD_MS ?
+    return tooQuick ?
       {score: 2, message: "Answered too quickly", usedClaude: false} :
       {
         score: PERSPECTIVE_CHOICE_SCORE,
@@ -63,7 +87,7 @@ export function preScore(input: ScoreInput): ScoreResult | null {
   if (looksLikeGibberish(text)) {
     return {score: 1, message: "Not a real answer", usedClaude: false};
   }
-  if (input.timeOnCard < MIN_TIME_ON_CARD_MS) {
+  if (tooQuick) {
     return {score: 2, message: "Answered too quickly", usedClaude: false};
   }
   return null;
