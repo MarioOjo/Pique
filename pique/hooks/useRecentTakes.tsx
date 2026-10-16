@@ -20,6 +20,9 @@ export interface RecentTake {
   // 'agree' / 'disagree' for perspective cards, the written answer for recall.
   responseText: string;
   body: string;
+  // Claude’s one-line reason for the score. Missing until the response is
+  // scored, and for answers a pre-check scored (those reasons are generic).
+  frankTake?: string;
 }
 
 const RECENT_TAKE_COUNT = 5;
@@ -67,7 +70,7 @@ export function useRecentTakes(userId: string | undefined): {
       recent,
       async (snapshot) => {
         const loaded = await Promise.all(
-          snapshot.docs.map(async (interaction) => {
+          snapshot.docs.map(async (interaction): Promise<RecentTake | null> => {
             const card = await loadCard(String(interaction.get('cardId')));
             if (!card) return null;
             return {
@@ -76,6 +79,10 @@ export function useRecentTakes(userId: string | undefined): {
               cardType: card.type,
               responseText: String(interaction.get('responseText') ?? ''),
               body: card.body,
+              frankTake:
+                interaction.get("scoredBy") === "claude" && interaction.get("scoreReason")
+                  ? String(interaction.get("scoreReason"))
+                  : undefined,
             };
           }),
         );

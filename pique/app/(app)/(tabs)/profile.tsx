@@ -150,6 +150,12 @@ export default function ProfileScreen() {
                     <Text style={styles.takeBody} numberOfLines={2} ellipsizeMode="tail">
                       {take.body}
                     </Text>
+                    {take.frankTake && (
+                      <Text style={styles.frankTake} numberOfLines={2} ellipsizeMode="tail">
+                        <Text style={styles.frankTakeLabel}>Frank’s take: </Text>
+                        {take.frankTake}
+                      </Text>
+                    )}
                   </View>
                 </View>
               ))}
@@ -330,6 +336,18 @@ const useStyles = makeStyles((c) => ({
     color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
+  },
+  frankTake: {
+    color: c.textSecondary,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  frankTakeLabel: {
+    color: c.accentText,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontStyle: 'normal',
   },
   takeBody: {
     color: c.text,
