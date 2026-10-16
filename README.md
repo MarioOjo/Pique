@@ -346,7 +346,7 @@ erDiagram
 | `users/{uid}/interests/{interestId}` | `interestId`, `weight` (0.1–3.0) | App during onboarding (at 1.0); `scoreResponse` afterwards |
 | `interests/{interestId}` | `id`, `name`, `emoji`, `createdAt` | Seeded once, from a fixed list of twelve |
 | `cards/{cardId}` | `interestId`, `type` (`perspective` / `recall`), `body`, `prompt`, `counterpoint?`, `difficulty`, `status`, `createdAt`, `expiresAt` | `generateCards` only |
-| `interactions/{id}` | `userId`, `cardId`, `responseText`, `timeOnCard` (ms), `skipped`, `engagementScore`, `scoredAt`, `createdAt` | App creates it; `scoreResponse` adds the score |
+| `interactions/{id}` | `userId`, `cardId`, `responseText`, `timeOnCard` (ms), `skipped`, `engagementScore`, `scoredAt`, `scoreReason`, `scoredBy` (`claude` / `precheck`), `createdAt` | App creates it; `scoreResponse` adds the score and the reason for it |
 | `stats/{uid}` | `currentStreak`, `longestStreak`, `totalResponses`, `lastActive` | `updateStats` only |
 
 The `BuddyConnection` type in `types/index.ts` defines the planned `buddies` collection for the accountability feature on the roadmap.
