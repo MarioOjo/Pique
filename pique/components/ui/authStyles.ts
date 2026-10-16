@@ -17,16 +17,6 @@ export const authStyles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: Theme.spacing.md,
   },
-  error: {
-    color: Colors.darkPurple,
-    backgroundColor: Colors.white,
-    borderColor: Colors.amber,
-    borderWidth: 1,
-    borderRadius: Theme.borderRadius.sm,
-    padding: Theme.spacing.sm + Theme.spacing.xs,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { TextField } from '@/components/ui/TextField';
 import { authStyles } from '@/components/ui/authStyles';
+import { Colors } from '@/constants/colors';
+import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 
@@ -97,9 +100,15 @@ export default function RegisterScreen() {
         onSubmitEditing={handleSignUp}
       />
 
-      {error && <Text style={authStyles.error}>{error}</Text>}
+      <ErrorMessage message={error} />
 
       <Button title="Create account" onPress={handleSignUp} loading={submitting} />
+
+      <Text style={styles.notice}>
+        By creating an account, you agree that Pique stores your answers and sends them to
+        Claude, Anthropic’s AI, to write and score your cards. Pique is for adults aged 18 and
+        over.
+      </Text>
 
       <View style={authStyles.footer}>
         <Text style={authStyles.footerText}>Already have an account? </Text>
@@ -110,3 +119,13 @@ export default function RegisterScreen() {
     </FormScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  notice: {
+    color: Colors.midGrey,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+});

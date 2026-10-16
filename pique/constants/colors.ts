@@ -4,7 +4,9 @@ export const Colors = {
   lightViolet: '#EDE9FE',
   amber: '#F0B429',
   lightGrey: '#F5F5F7',
-  midGrey: '#8B92A5',
+  // Secondary text. Dark enough for 4.5:1 contrast on white, lightGrey and
+  // lightViolet (WCAG AA for small text).
+  midGrey: '#5F6678',
   borderGrey: '#E5E7EB',
   darkPurple: '#2D1B5A',
   // Body text on navy backgrounds.

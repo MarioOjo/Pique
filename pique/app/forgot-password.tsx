@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { FirebaseError } from 'firebase/app';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { TextField } from '@/components/ui/TextField';
 import { authStyles } from '@/components/ui/authStyles';
@@ -86,11 +87,7 @@ export default function ForgotPasswordScreen() {
           onSubmitEditing={handleSend}
           editable={!sentTo && !sending}
         />
-        {error && (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {error}
-          </Text>
-        )}
+        <ErrorMessage message={error} />
       </View>
 
       {sentTo ? (
@@ -133,11 +130,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Theme.spacing.sm,
-  },
-  error: {
-    color: Colors.danger,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
   },
   success: {
     color: Colors.success,
