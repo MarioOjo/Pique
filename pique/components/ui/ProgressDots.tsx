@@ -5,13 +5,14 @@ import { useTheme } from '@/hooks/useTheme';
 interface ProgressDotsProps {
   total: number;
   current: number;
-  // The theme's text colour by default; pass amber on always-dark screens.
+  // Violet (the brand's progress colour) by default; pass amber on
+  // always-dark screens.
   color?: string;
 }
 
 export function ProgressDots({ total, current, color }: ProgressDotsProps) {
   const { colors } = useTheme();
-  const dotColor = color ?? colors.text;
+  const dotColor = color ?? colors.accent;
   return (
     <View
       style={styles.row}
