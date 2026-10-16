@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   button: {
     height: 56,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: Theme.borderRadius.lg,
     backgroundColor: Colors.navy,
     // A navy button on a navy screen needs an edge to read as a button.
     borderColor: Colors.amber,
