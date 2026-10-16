@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { TextField } from '@/components/ui/TextField';
@@ -73,7 +74,7 @@ export default function LoginScreen() {
         <Text style={styles.forgotText}>Forgot password?</Text>
       </Pressable>
 
-      {error && <Text style={authStyles.error}>{error}</Text>}
+      <ErrorMessage message={error} />
 
       <Button title="Sign in" onPress={handleSignIn} loading={submitting} />
 

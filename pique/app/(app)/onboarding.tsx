@@ -4,10 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { InterestChip } from '@/components/ui/InterestChip';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { ProgressDots } from '@/components/ui/ProgressDots';
-import { WelcomeBanner } from '@/components/ui/WelcomeBanner';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,7 +20,7 @@ const MIN_SELECTED = 3;
 
 export default function OnboardingScreen() {
   const router = useRouter();
-  const { user, piqueUser } = useAuth();
+  const { user } = useAuth();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [loadedSaved, setLoadedSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,13 +92,8 @@ export default function OnboardingScreen() {
     }
   };
 
-  const welcome = piqueUser?.name ? `Welcome to Pique, ${piqueUser.name}! 👋` : null;
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Mounted once the profile name is known, since right after sign-up
-          the profile doc can arrive a moment after this screen. */}
-      {welcome && <WelcomeBanner message={welcome} />}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LogoMark />
         <ProgressDots total={ONBOARDING_STEPS} current={STEP.topics} />
@@ -128,7 +123,7 @@ export default function OnboardingScreen() {
           {selected.size} of {MIN_SELECTED} minimum selected
         </Text>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        <ErrorMessage message={error} />
 
         <Button
           title="Continue"
@@ -182,15 +177,5 @@ const styles = StyleSheet.create({
   },
   counterMet: {
     color: Colors.violet,
-  },
-  error: {
-    color: Colors.darkPurple,
-    backgroundColor: Colors.white,
-    borderColor: Colors.amber,
-    borderWidth: 1,
-    borderRadius: Theme.borderRadius.sm,
-    padding: Theme.spacing.sm + Theme.spacing.xs,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
   },
 });

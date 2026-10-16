@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { ProgressDots } from '@/components/ui/ProgressDots';
 import { Colors } from '@/constants/colors';
@@ -88,7 +89,7 @@ export function QuestionScreen({
         <View accessibilityRole="radiogroup">{children}</View>
 
         {footnote && <Text style={styles.footnote}>{footnote}</Text>}
-        {error && <Text style={styles.error}>{error}</Text>}
+        <ErrorMessage message={error} />
 
         <Button title="Continue" onPress={onContinue} disabled={!canContinue} loading={saving} />
 
@@ -180,16 +181,6 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
     textAlign: 'center',
-  },
-  error: {
-    color: Colors.darkPurple,
-    backgroundColor: Colors.white,
-    borderColor: Colors.amber,
-    borderWidth: 1,
-    borderRadius: Theme.borderRadius.sm,
-    padding: Theme.spacing.sm + Theme.spacing.xs,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
   },
   skip: {
     alignSelf: 'center',

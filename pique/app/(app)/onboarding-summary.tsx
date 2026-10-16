@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
@@ -59,7 +60,7 @@ export default function OnboardingSummaryScreen() {
           <SummaryRow emoji="🃏" text={`Each session is ${sessionSize} cards.`} />
         </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
+        <ErrorMessage message={error} />
 
         <Button title="Let’s go" onPress={handleStart} loading={submitting} />
       </ScrollView>
@@ -120,15 +121,5 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     lineHeight: 22,
-  },
-  error: {
-    color: Colors.darkPurple,
-    backgroundColor: Colors.white,
-    borderColor: Colors.amber,
-    borderWidth: 1,
-    borderRadius: Theme.borderRadius.sm,
-    padding: Theme.spacing.sm + Theme.spacing.xs,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
   },
 });

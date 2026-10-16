@@ -18,6 +18,7 @@ import Constants from 'expo-constants';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Avatar } from '@/components/ui/Avatar';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
@@ -130,7 +131,7 @@ export default function SettingsScreen() {
           accessibilityLabel="Back"
           hitSlop={Theme.spacing.sm}
         >
-          <Ionicons name="arrow-back" size={24} color={Colors.navy} />
+          <Ionicons name="chevron-back" size={24} color={Colors.navy} />
         </Pressable>
         <Text style={styles.title} accessibilityRole="header">
           Settings
@@ -146,7 +147,7 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {error && <Text style={styles.error}>{error}</Text>}
+          <ErrorMessage message={error} />
 
           {/* PROFILE */}
           <View style={styles.section}>
@@ -359,6 +360,21 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
 
+          {/* PRIVACY */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>PRIVACY</Text>
+            <View style={styles.privacy}>
+              <Text style={styles.privacyText}>
+                Pique stores your name, email, age band, onboarding answers, topics, and each
+                response with its score, in Google Firebase.
+              </Text>
+              <Text style={styles.privacyText}>
+                Your written answers are sent to Claude, Anthropic’s AI, to score them, and
+                Claude writes your cards from the topics and answers you chose.
+              </Text>
+            </View>
+          </View>
+
           {/* APP */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>APP</Text>
@@ -412,11 +428,15 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.md,
     gap: Theme.spacing.md,
   },
-  error: {
-    color: Colors.danger,
+  privacy: {
+    gap: Theme.spacing.sm,
+    paddingBottom: Theme.spacing.md,
+  },
+  privacyText: {
+    color: Colors.midGrey,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
-    textAlign: 'center',
+    lineHeight: 19,
   },
   section: {
     backgroundColor: Colors.white,
