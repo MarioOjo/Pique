@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 
 interface ButtonProps {
   title: string;
@@ -19,9 +20,11 @@ export function Button({
   disabled = false,
   variant = 'solid',
 }: ButtonProps) {
+  const styles = useStyles();
   const isDisabled = disabled || loading;
   const outline = variant === 'outline';
   const accent = variant === 'accent';
+  const { colors } = useTheme();
 
   return (
     <Pressable
@@ -39,17 +42,23 @@ export function Button({
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={outline || accent ? Colors.navy : Colors.white} />
+        <ActivityIndicator
+          color={outline ? colors.text : accent ? Colors.navy : colors.onPrimary}
+        />
       ) : (
-        <Text style={[styles.title, (outline || accent) && styles.darkTitle]}>{title}</Text>
+        <Text
+          style={[styles.title, outline && styles.outlineTitle, accent && styles.accentTitle]}
+        >
+          {title}
+        </Text>
       )}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   button: {
-    backgroundColor: Colors.navy,
+    backgroundColor: c.primary,
     borderRadius: Theme.borderRadius.md,
     paddingVertical: Theme.spacing.md,
     alignItems: 'center',
@@ -58,7 +67,7 @@ const styles = StyleSheet.create({
   },
   outline: {
     backgroundColor: 'transparent',
-    borderColor: Colors.navy,
+    borderColor: c.text,
     borderWidth: 1.5,
     borderRadius: Theme.borderRadius.lg,
     // Without padding, minHeight sets it to exactly 56 including the border.
@@ -71,21 +80,25 @@ const styles = StyleSheet.create({
   accent: {
     backgroundColor: Colors.amber,
   },
-  darkTitle: {
+  outlineTitle: {
+    color: c.text,
+  },
+  // Amber is the same in both modes, so its label stays navy.
+  accentTitle: {
     color: Colors.navy,
   },
   pressed: {
     opacity: 0.85,
   },
   disabled: {
-    backgroundColor: Colors.midGrey,
+    backgroundColor: c.disabled,
   },
   loading: {
     opacity: 0.8,
   },
   title: {
-    color: Colors.white,
+    color: c.onPrimary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
-});
+}));

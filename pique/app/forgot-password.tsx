@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FirebaseError } from 'firebase/app';
@@ -8,9 +8,9 @@ import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { TextField } from '@/components/ui/TextField';
-import { authStyles } from '@/components/ui/authStyles';
-import { Colors } from '@/constants/colors';
+import { useAuthStyles } from '@/components/ui/authStyles';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 import { auth, useEmulators } from '@/lib/firebase';
 
@@ -19,6 +19,9 @@ const MIN_TOUCH_TARGET = 44;
 // Outside both route groups, so it opens from login (signed out) and from
 // Settings (signed in). The root layout leaves it alone in either state.
 export default function ForgotPasswordScreen() {
+  const styles = useStyles();
+  const authStyles = useAuthStyles();
+  const { colors } = useTheme();
   const router = useRouter();
   // Signed in (from Settings): start with their email so they can just send.
   const [email, setEmail] = useState(() => auth.currentUser?.email ?? '');
@@ -65,7 +68,7 @@ export default function ForgotPasswordScreen() {
         accessibilityRole="button"
         accessibilityLabel="Back"
       >
-        <Ionicons name="chevron-back" size={24} color={Colors.navy} />
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
       </Pressable>
 
       <Text style={authStyles.heading} accessibilityRole="header">
@@ -109,7 +112,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   // FormScreen centres its content, so the back button is pinned to the
   // top-left corner instead of sitting in the flow.
   back: {
@@ -122,7 +125,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   subtitle: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 15,
     textAlign: 'center',
@@ -132,15 +135,15 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   success: {
-    color: Colors.success,
+    color: c.success,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     textAlign: 'center',
   },
   devNote: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.xs,
     textAlign: 'center',
   },
-});
+}));

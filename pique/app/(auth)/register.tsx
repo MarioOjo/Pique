@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { TextField } from '@/components/ui/TextField';
-import { authStyles } from '@/components/ui/authStyles';
-import { Colors } from '@/constants/colors';
+import { useAuthStyles } from '@/components/ui/authStyles';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { getAuthErrorMessage } from '@/lib/authErrors';
 
 const MIN_PASSWORD_LENGTH = 6;
 
 export default function RegisterScreen() {
+  const styles = useStyles();
+  const authStyles = useAuthStyles();
   const { signUp } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -120,12 +122,12 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   notice: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 12,
     lineHeight: 18,
     textAlign: 'center',
   },
-});
+}));

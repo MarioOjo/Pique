@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, type Href } from 'expo-router';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { ProgressDots } from '@/components/ui/ProgressDots';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { ONBOARDING_STEPS } from '@/lib/onboarding';
@@ -72,6 +72,7 @@ export function QuestionScreen({
   skipLabel,
   onSkip,
 }: QuestionScreenProps) {
+  const styles = useStyles();
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -120,6 +121,7 @@ interface OptionCardProps {
 
 // One choice in a question's list.
 export function OptionCard({ label, selected, onPress, sub, leading, centred }: OptionCardProps) {
+  const styles = useStyles();
   return (
     <Pressable
       style={[styles.option, centred && styles.optionCentred, selected && styles.optionSelected]}
@@ -141,10 +143,10 @@ export function OptionCard({ label, selected, onPress, sub, leading, centred }: 
 
 const MIN_TOUCH_TARGET = 44;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   content: {
     flexGrow: 1,
@@ -157,7 +159,7 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   eyebrow: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
     textAlign: 'center',
@@ -165,19 +167,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   heading: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xl,
     textAlign: 'center',
   },
   subheading: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     textAlign: 'center',
   },
   footnote: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
     textAlign: 'center',
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.md,
   },
   skipText: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
@@ -198,8 +200,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Theme.spacing.sm + Theme.spacing.xs,
-    backgroundColor: Colors.white,
-    borderColor: Colors.white,
+    backgroundColor: c.surface,
+    borderColor: c.surface,
     borderWidth: 2,
     borderRadius: Theme.borderRadius.md,
     paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
@@ -210,12 +212,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   optionSelected: {
-    borderColor: Colors.violet,
-    backgroundColor: Colors.lightViolet,
+    borderColor: c.accent,
+    backgroundColor: c.accentSoft,
   },
   leading: {
     minWidth: Theme.spacing.xl,
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.lg,
     textAlign: 'center',
@@ -229,16 +231,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   optionLabel: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
   selectedText: {
-    color: Colors.violet,
+    color: c.accentText,
   },
   optionSub: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
-});
+}));

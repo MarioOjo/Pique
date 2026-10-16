@@ -1,10 +1,11 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { useStats } from '@/hooks/useStats';
 import { useRecentTakes, type RecentTake } from '@/hooks/useRecentTakes';
@@ -24,6 +25,8 @@ function takeAction(take: RecentTake): string {
 }
 
 export default function ProfileScreen() {
+  const styles = useStyles();
+  const { colors } = useTheme();
   const router = useRouter();
   const { user, piqueUser } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
@@ -48,7 +51,7 @@ export default function ProfileScreen() {
             accessibilityRole="button"
             accessibilityLabel="Settings"
           >
-            <Ionicons name="settings-outline" size={22} color={Colors.navy} />
+            <Ionicons name="settings-outline" size={22} color={colors.text} />
           </Pressable>
         </View>
 
@@ -93,7 +96,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Top topics</Text>
           {interestsLoading ? (
-            <ActivityIndicator color={Colors.violet} />
+            <ActivityIndicator color={colors.accent} />
           ) : interests.length === 0 ? (
             <Text style={styles.empty}>No topics yet.</Text>
           ) : (
@@ -128,7 +131,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Recent takes</Text>
           {takesLoading ? (
-            <ActivityIndicator color={Colors.violet} />
+            <ActivityIndicator color={colors.accent} />
           ) : takes.length === 0 ? (
             <Text style={styles.takesEmpty}>Nothing yet — complete your first card to see your takes here.</Text>
           ) : (
@@ -158,10 +161,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   content: {
     flexGrow: 1,
@@ -184,7 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   header: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.lg,
   },
@@ -198,12 +201,12 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.xs / 2,
   },
   name: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 18,
   },
   email: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
   },
@@ -213,7 +216,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     borderRadius: Theme.borderRadius.md,
     padding: Theme.spacing.md,
     gap: Theme.spacing.xs,
@@ -224,7 +227,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   statValue: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xl,
   },
@@ -232,13 +235,13 @@ const styles = StyleSheet.create({
     color: Colors.amber,
   },
   streakPrompt: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 14,
     lineHeight: 20,
   },
   statLabel: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
@@ -246,14 +249,14 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.md,
   },
   sectionLabel: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 12,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   empty: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
   },
@@ -266,41 +269,41 @@ const styles = StyleSheet.create({
   },
   topicRank: {
     width: 20,
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
   topicName: {
     flex: 1,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 15,
   },
   topicStrength: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
   barTrack: {
     height: Theme.spacing.xs,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
-    backgroundColor: Colors.violet,
+    backgroundColor: c.accent,
     borderRadius: 2,
   },
   takesEmpty: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     textAlign: 'center',
   },
   // One card for the whole list, with dividers between the takes.
   takes: {
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     borderRadius: Theme.borderRadius.md,
     paddingHorizontal: Theme.spacing.md,
   },
@@ -310,7 +313,7 @@ const styles = StyleSheet.create({
   },
   takeDivider: {
     height: 1,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
   },
   takeActionRow: {
     flexDirection: 'row',
@@ -324,14 +327,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.amber,
   },
   takeAction: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
   takeBody: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     lineHeight: 20,
   },
-});
+}));

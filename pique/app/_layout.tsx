@@ -10,6 +10,7 @@ import {
 } from '@expo-google-fonts/poppins';
 import { SplashAnimation } from '@/components/ui/SplashAnimation';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
+import { ThemeProvider, useTheme } from '@/hooks/useTheme';
 import { ONBOARDING_ROUTES } from '@/lib/onboarding';
 
 SplashScreen.preventAutoHideAsync();
@@ -19,6 +20,7 @@ function RootNavigator() {
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
+  const { scheme, colors } = useTheme();
   // The intro plays over the app on cold start while auth resolves underneath.
   const [showSplash, setShowSplash] = useState(true);
 
@@ -54,8 +56,11 @@ function RootNavigator() {
 
   return (
     <>
-      <StatusBar style={showSplash ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false }} />
+      <StatusBar style={showSplash || scheme === 'dark' ? 'light' : 'dark'} />
+      {/* Background set here too, so screen transitions never flash white. */}
+      <Stack
+        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+      />
       {showSplash && (
         <SplashAnimation appReady={!loading} onDone={() => setShowSplash(false)} />
       )}
@@ -73,8 +78,10 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <RootNavigator />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

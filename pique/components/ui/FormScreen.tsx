@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 
 export function FormScreen({ children }: { children: ReactNode }) {
+  const styles = useStyles();
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -23,10 +24,10 @@ export function FormScreen({ children }: { children: ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   flex: {
     flex: 1,
@@ -37,4 +38,4 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.lg,
     gap: Theme.spacing.md,
   },
-});
+}));

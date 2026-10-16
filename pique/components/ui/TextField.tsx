@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 
 interface TextFieldProps extends TextInputProps {
   label: string;
@@ -17,7 +17,9 @@ const EYE_ICON = 20;
 const EYE_HIT_SLOP = 2;
 
 export function TextField({ label, password = false, ...inputProps }: TextFieldProps) {
+  const styles = useStyles();
   const [showPassword, setShowPassword] = useState(false);
+  const { colors } = useTheme();
 
   return (
     <View style={styles.container}>
@@ -25,7 +27,7 @@ export function TextField({ label, password = false, ...inputProps }: TextFieldP
       <View style={styles.inputWrap}>
         <TextInput
           style={[styles.input, password && styles.inputWithEye]}
-          placeholderTextColor={Colors.midGrey}
+          placeholderTextColor={colors.textSecondary}
           accessibilityLabel={label}
           {...inputProps}
           secureTextEntry={password ? !showPassword : inputProps.secureTextEntry}
@@ -42,7 +44,7 @@ export function TextField({ label, password = false, ...inputProps }: TextFieldP
               // Shows the current state: slashed while hidden, open while visible.
               name={showPassword ? 'eye-outline' : 'eye-off-outline'}
               size={EYE_ICON}
-              color={Colors.violet}
+              color={colors.accentText}
             />
           </Pressable>
         )}
@@ -51,12 +53,12 @@ export function TextField({ label, password = false, ...inputProps }: TextFieldP
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   container: {
     gap: Theme.spacing.xs,
   },
   label: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
   },
@@ -64,13 +66,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   input: {
-    backgroundColor: Colors.white,
-    borderColor: Colors.borderGrey,
+    backgroundColor: c.surface,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: Theme.borderRadius.md,
     paddingHorizontal: Theme.spacing.md,
     paddingVertical: Theme.spacing.md - Theme.spacing.xs,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
   },
@@ -89,4 +91,4 @@ const styles = StyleSheet.create({
   eyePressed: {
     opacity: 0.6,
   },
-});
+}));

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
@@ -8,8 +8,8 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { InterestChip } from '@/components/ui/InterestChip';
 import { LogoMark } from '@/components/ui/LogoMark';
 import { ProgressDots } from '@/components/ui/ProgressDots';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { ONBOARDING_STEPS, STEP } from '@/lib/onboarding';
@@ -19,6 +19,7 @@ import type { UserInterest } from '@/types';
 const MIN_SELECTED = 3;
 
 export default function OnboardingScreen() {
+  const styles = useStyles();
   const router = useRouter();
   const { user } = useAuth();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
@@ -136,10 +137,10 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   content: {
     flexGrow: 1,
@@ -152,13 +153,13 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.sm,
   },
   heading: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xl,
     textAlign: 'center',
   },
   subheading: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     textAlign: 'center',
@@ -170,12 +171,12 @@ const styles = StyleSheet.create({
     rowGap: Theme.spacing.sm + Theme.spacing.xs,
   },
   counter: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
     textAlign: 'center',
   },
   counterMet: {
-    color: Colors.violet,
+    color: c.accentText,
   },
-});
+}));

@@ -1,6 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '@/constants/colors';
+import { Text, View } from 'react-native';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { findAvatar } from '@/lib/avatars';
 
 interface AvatarProps {
@@ -12,6 +12,7 @@ interface AvatarProps {
 
 // The chosen preset (emoji on its colour), or the name's initial on navy.
 export function Avatar({ name, avatarId, size = 'medium' }: AvatarProps) {
+  const styles = useStyles();
   const preset = findAvatar(avatarId);
   const large = size === 'large';
 
@@ -39,12 +40,12 @@ export function Avatar({ name, avatarId, size = 'medium' }: AvatarProps) {
 const MEDIUM = 56;
 const LARGE = 64;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   circle: {
     width: MEDIUM,
     height: MEDIUM,
     borderRadius: Theme.borderRadius.full,
-    backgroundColor: Colors.navy,
+    backgroundColor: c.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     height: LARGE,
   },
   initial: {
-    color: Colors.white,
+    color: c.onPrimary,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.lg + Theme.spacing.xs,
   },
@@ -66,4 +67,4 @@ const styles = StyleSheet.create({
   emojiLarge: {
     fontSize: Theme.fontSize.xl + Theme.spacing.xs,
   },
-});
+}));

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { QuestionScreen, useSaveAnswer } from '@/components/onboarding/QuestionScreen';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_FRANK_STYLE, FRANK_STYLES, STEP, type FrankStyle } from '@/lib/onboarding';
 
@@ -11,6 +12,7 @@ const MIN_TOUCH_TARGET = 44;
 
 // A 5-point scale from "back me up" to "push back hard".
 export default function OnboardingFrankStyleScreen() {
+  const styles = useStyles();
   const { piqueUser } = useAuth();
   const [selected, setSelected] = useState<FrankStyle | null>(
     () => piqueUser?.frankStyle ?? null,
@@ -65,12 +67,14 @@ export default function OnboardingFrankStyleScreen() {
   );
 }
 
+// White on the violet selected dot, in both modes.
+const DOT_CENTRE = Colors.white;
 const DOT = 22;
 const DOT_SELECTED = 28;
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   card: {
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     borderRadius: Theme.borderRadius.md,
     padding: Theme.spacing.lg,
     gap: Theme.spacing.sm,
@@ -80,7 +84,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   endLabel: {
-    color: Colors.midGrey,
+    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },
@@ -100,8 +104,8 @@ const styles = StyleSheet.create({
     height: DOT,
     borderRadius: DOT / 2,
     borderWidth: 2,
-    borderColor: Colors.midGrey,
-    backgroundColor: Colors.lightGrey,
+    borderColor: c.textSecondary,
+    backgroundColor: c.background,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -109,19 +113,19 @@ const styles = StyleSheet.create({
     width: DOT_SELECTED,
     height: DOT_SELECTED,
     borderRadius: DOT_SELECTED / 2,
-    borderColor: Colors.violet,
-    backgroundColor: Colors.violet,
+    borderColor: c.accent,
+    backgroundColor: c.accent,
   },
   dotCentre: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: Colors.white,
+    backgroundColor: DOT_CENTRE,
   },
   selectedLabel: {
-    color: Colors.violet,
+    color: c.accentText,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.sm,
     textAlign: 'center',
   },
-});
+}));

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { LogoMark } from '@/components/ui/LogoMark';
-import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import {
@@ -19,6 +19,7 @@ import {
 
 // Last onboarding step: recaps the answers, then completes onboarding.
 export default function OnboardingSummaryScreen() {
+  const styles = useStyles();
   const { user, piqueUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export default function OnboardingSummaryScreen() {
 }
 
 function SummaryRow({ emoji, text }: { emoji: string; text: string }) {
+  const styles = useStyles();
   return (
     <View style={styles.row}>
       <Text style={styles.emoji} accessibilityElementsHidden importantForAccessibility="no">
@@ -79,10 +81,10 @@ function SummaryRow({ emoji, text }: { emoji: string; text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.lightGrey,
+    backgroundColor: c.background,
   },
   content: {
     flexGrow: 1,
@@ -92,19 +94,19 @@ const styles = StyleSheet.create({
     gap: Theme.spacing.lg,
   },
   heading: {
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.xl,
     textAlign: 'center',
   },
   card: {
-    backgroundColor: Colors.white,
+    backgroundColor: c.surface,
     borderRadius: Theme.borderRadius.md,
     padding: Theme.spacing.lg,
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.borderGrey,
+    backgroundColor: c.border,
     marginVertical: Theme.spacing.sm + Theme.spacing.xs,
   },
   row: {
@@ -117,9 +119,9 @@ const styles = StyleSheet.create({
   },
   rowText: {
     flex: 1,
-    color: Colors.navy,
+    color: c.text,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
     lineHeight: 22,
   },
-});
+}));
