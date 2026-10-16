@@ -3,6 +3,7 @@ import {setGlobalOptions} from "firebase-functions";
 import {HttpsError, onCall} from "firebase-functions/https";
 import * as logger from "firebase-functions/logger";
 import {initializeApp} from "firebase-admin/app";
+import {getAuth} from "firebase-admin/auth";
 import {
   DocumentReference,
   FieldValue,
@@ -25,6 +26,7 @@ import {
 import {computeStreaks, localDayNumber} from "./stats/streaks";
 import {
   CardGenerationRequest,
+  DeleteAccountResult,
   GenerateCardsResult,
   ScoreResponseRequest,
   StoredCard,
@@ -418,5 +420,50 @@ export const updateStats = onCall(
     });
 
     return {currentStreak, totalResponses};
+  },
+);
+
+/**
+ * Permanently deletes the caller's account and everything stored about
+ * them: their interactions, stats, profile and interests, then their
+ * sign-in. Generated cards aren't tied to a user and hold no personal
+ * data, so they stay.
+ */
+export const deleteAccount = onCall(
+  async (request): Promise<DeleteAccountResult> => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Must be signed in");
+    }
+    const uid = request.auth.uid;
+
+    try {
+      // Interactions are top-level documents keyed by userId.
+      const interactions = await db
+        .collection("interactions")
+        .where("userId", "==", uid)
+        .get();
+      const writer = db.bulkWriter();
+      interactions.docs.forEach((doc) => writer.delete(doc.ref));
+      writer.delete(db.collection("stats").doc(uid));
+      await writer.close();
+
+      // The profile together with its interests subcollection.
+      await db.recursiveDelete(db.collection("users").doc(uid));
+
+      await getAuth().deleteUser(uid);
+    } catch (error) {
+      // A retry after a partial failure finds the sign-in already gone.
+      const code = (error as {code?: string}).code;
+      if (code !== "auth/user-not-found") {
+        logger.error("Account deletion failed", {
+          uid,
+          error: describeError(error),
+        });
+        throw new HttpsError("internal", "Could not delete account");
+      }
+    }
+
+    logger.info("Account deleted", {uid});
+    return {deleted: true};
   },
 );

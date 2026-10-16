@@ -61,3 +61,7 @@ export interface ScoreResponseResult {
   score: number;
   message: string;
 }
+
+export interface DeleteAccountResult {
+  deleted: boolean;
+}
