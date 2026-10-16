@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen() {
   const handleSend = async () => {
     const trimmed = email.trim();
     if (!trimmed) {
-      setError('Enter your email first.');
+      setError('Please enter your email address.');
       return;
     }
     setError(null);
@@ -78,7 +78,7 @@ export default function ForgotPasswordScreen() {
 
       <View style={styles.field}>
         <TextField
-          label="EMAIL"
+          label="Email"
           value={email}
           onChangeText={setEmail}
           placeholder="you@example.com"
@@ -96,7 +96,8 @@ export default function ForgotPasswordScreen() {
       {sentTo ? (
         <View style={styles.field}>
           <Text style={styles.success} accessibilityLiveRegion="polite">
-            If an account exists for {sentTo}, we’ve sent a reset link. Check your inbox.
+            If an account exists for {sentTo}, we’ve sent a reset link. Check your inbox, and
+            your spam folder if it isn’t there in a few minutes.
           </Text>
           {useEmulators && (
             <Text style={styles.devNote}>
@@ -104,6 +105,11 @@ export default function ForgotPasswordScreen() {
               terminal.
             </Text>
           )}
+          <Button
+            title={auth.currentUser ? 'Back to settings' : 'Back to sign in'}
+            variant="outline"
+            onPress={goBack}
+          />
         </View>
       ) : (
         <Button title="Send reset link" onPress={handleSend} loading={sending} />

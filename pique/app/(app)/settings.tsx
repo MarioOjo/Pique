@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -55,6 +55,13 @@ export default function SettingsScreen() {
   const [signingOut, setSigningOut] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+
+  // The error shows at the top, so scroll up to it. Sign out and delete
+  // sit at the bottom, where it would otherwise be off screen.
+  useEffect(() => {
+    if (error) scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }, [error]);
 
   const name = piqueUser?.name?.trim() || 'Pique user';
   const email = piqueUser?.email ?? user?.email ?? '';
@@ -175,6 +182,7 @@ export default function SettingsScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}

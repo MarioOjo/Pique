@@ -158,7 +158,7 @@ export function useCards(): UseCardsResult {
       indexRef.current = 0;
     } catch (e) {
       console.warn('Failed to load cards', e);
-      setError('We couldn’t load your cards. Please try again.');
+      setError('Check your connection and try again.');
     } finally {
       setIsLoading(false);
     }

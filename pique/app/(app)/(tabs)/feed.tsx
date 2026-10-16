@@ -83,6 +83,7 @@ export default function FeedScreen() {
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.accent} />
           <Text style={[styles.message, styles.loadingMessage]}>Frank is writing your cards…</Text>
+          <Text style={styles.hint}>This usually takes a few seconds.</Text>
         </View>
       );
     }
@@ -99,7 +100,11 @@ export default function FeedScreen() {
     if (error || totalCards === 0) {
       return (
         <View style={styles.centered}>
-          <Text style={styles.message}>{error ?? 'No cards available right now.'}</Text>
+          <Ionicons name="cloud-offline-outline" size={40} color={colors.textSecondary} />
+          <Text style={styles.title} accessibilityRole="header">
+            Frank couldn’t load your cards
+          </Text>
+          <Text style={styles.message}>{error ?? 'There are no cards right now.'}</Text>
           <View style={styles.action}>
             <Button title="Try again" onPress={loadCards} />
           </View>
@@ -132,7 +137,7 @@ export default function FeedScreen() {
           </View>
           <Text style={styles.progressText}>
             Card {currentIndex + 1} of {totalCards}
-            {usingFallbackCards ? ' · sample cards' : ''}
+            {usingFallbackCards ? ' · sample cards while Frank is offline' : ''}
           </Text>
         </View>
 
@@ -278,6 +283,18 @@ const useStyles = makeStyles((c) => ({
   },
   loadingMessage: {
     fontStyle: 'italic',
+  },
+  title: {
+    color: c.text,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.lg,
+    textAlign: 'center',
+  },
+  hint: {
+    color: c.textSecondary,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    textAlign: 'center',
   },
   message: {
     color: c.textSecondary,
