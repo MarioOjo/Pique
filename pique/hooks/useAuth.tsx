@@ -15,6 +15,7 @@ import {
   type DocumentSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { isAgeBand, isFrankStyle, isSessionSize, isWhyHere } from '@/lib/onboarding';
 import type { User as PiqueUser } from '@/types';
 
 interface AuthContextType {
@@ -41,6 +42,10 @@ function toPiqueUser(snapshot: DocumentSnapshot): PiqueUser | null {
     frankIntroSeen: data.frankIntroSeen === true,
     avatarId: typeof data.avatarId === 'string' ? data.avatarId : undefined,
     onboardingComplete: data.onboardingComplete === true,
+    ageBand: isAgeBand(data.ageBand) ? data.ageBand : undefined,
+    whyHere: isWhyHere(data.whyHere) ? data.whyHere : undefined,
+    frankStyle: isFrankStyle(data.frankStyle) ? data.frankStyle : undefined,
+    sessionSize: isSessionSize(data.sessionSize) ? data.sessionSize : undefined,
     dailyCardCount: data.dailyCardCount,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
   };

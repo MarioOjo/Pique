@@ -1,3 +1,4 @@
+import type { AgeBand, FrankStyle, SessionSize, WhyHere } from '@/lib/onboarding';
 import type { Timestamp } from 'firebase/firestore';
 
 export type CardType = 'perspective' | 'recall';
@@ -68,6 +69,12 @@ export interface User {
   // One of the presets in lib/avatars.ts; initials are shown when unset.
   avatarId?: string;
   onboardingComplete: boolean;
+  // Onboarding answers (lib/onboarding.ts). Missing on older accounts and
+  // until each question is answered.
+  ageBand?: AgeBand;
+  whyHere?: WhyHere;
+  frankStyle?: FrankStyle;
+  sessionSize?: SessionSize;
   dailyCardCount: number;
   createdAt: Date;
 }
