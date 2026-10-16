@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
@@ -27,6 +28,7 @@ import { useStats } from '@/hooks/useStats';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { AVATAR_PRESETS } from '@/lib/avatars';
 import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
+import { deleteAccount } from '@/lib/claude';
 import { db } from '@/lib/firebase';
 
 const MIN_TOUCH_TARGET = 44;
@@ -48,6 +50,7 @@ export default function SettingsScreen() {
   const [nameDraft, setNameDraft] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const name = piqueUser?.name?.trim() || 'Pique user';
@@ -107,6 +110,32 @@ export default function SettingsScreen() {
     // Animates the time row in or out.
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     reminder.setEnabled(value);
+  };
+
+  const runDelete = async () => {
+    setError(null);
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // The sign-in no longer exists on the server; clearing the local
+      // session lets the root layout move on to login.
+      await signOut();
+    } catch (e) {
+      console.warn('Account deletion failed', e);
+      setError('We couldn’t delete your account. Check your connection and try again.');
+      setDeleting(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    Alert.alert(
+      'Delete your account?',
+      'This permanently deletes your profile, topics, answers and streaks. It can’t be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: runDelete },
+      ],
+    );
   };
 
   const handleSignOut = async () => {
@@ -358,6 +387,18 @@ export default function SettingsScreen() {
               <Text style={styles.dangerText}>Sign out</Text>
               {signingOut && <ActivityIndicator color={Colors.danger} />}
             </Pressable>
+            <View style={styles.divider} />
+            <Pressable
+              style={styles.row}
+              onPress={confirmDelete}
+              disabled={deleting || signingOut}
+              accessibilityRole="button"
+              accessibilityHint="Asks for confirmation first"
+              accessibilityState={{ busy: deleting, disabled: deleting || signingOut }}
+            >
+              <Text style={styles.dangerText}>Delete account</Text>
+              {deleting && <ActivityIndicator color={Colors.danger} />}
+            </Pressable>
           </View>
 
           {/* PRIVACY */}
@@ -371,6 +412,9 @@ export default function SettingsScreen() {
               <Text style={styles.privacyText}>
                 Your written answers are sent to Claude, Anthropic’s AI, to score them, and
                 Claude writes your cards from the topics and answers you chose.
+              </Text>
+              <Text style={styles.privacyText}>
+                Delete account (above) permanently removes all of it.
               </Text>
             </View>
           </View>

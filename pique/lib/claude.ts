@@ -114,3 +114,15 @@ export async function updateStats(userId: string): Promise<UpdateStatsResult> {
   });
   return result.data;
 }
+
+// Mirrors DeleteAccountResult in functions/src.
+interface DeleteAccountResult {
+  deleted: boolean;
+}
+
+const deleteAccountCallable = httpsCallable<void, DeleteAccountResult>(functions, 'deleteAccount');
+
+// Permanently deletes the signed-in user's account and all their data.
+export async function deleteAccount(): Promise<void> {
+  await deleteAccountCallable();
+}
