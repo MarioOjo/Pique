@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Image, Pressable, Text, TextInput, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { INTERESTS } from '@/lib/seedInterests';
@@ -379,7 +380,19 @@ export function CardComponent({
           accessibilityRole="button"
           accessibilityState={{ disabled: isSkipping }}
         >
-          <Text style={styles.skipText}>Skip this card</Text>
+          {/* Turns violet while pressed, the brand colour for a choice. */}
+          {({ pressed }) => (
+            <>
+              <Ionicons
+                name="play-skip-forward-outline"
+                size={SKIP_ICON}
+                color={pressed ? colors.accentText : colors.text}
+              />
+              <Text style={[styles.skipText, pressed && styles.skipTextPressed]}>
+                Skip this card
+              </Text>
+            </>
+          )}
         </Pressable>
       )}
       {isSkipping && (
@@ -395,6 +408,7 @@ export function CardComponent({
 }
 
 const CREDIT_TEXT = Colors.white;
+const SKIP_ICON = 16;
 const CONTENT_PADDING = Theme.spacing.md + Theme.spacing.xs; // 20
 
 const useStyles = makeStyles((c) => ({
@@ -490,9 +504,10 @@ const useStyles = makeStyles((c) => ({
     borderRadius: Theme.borderRadius.md,
     paddingVertical: Theme.spacing.sm + Theme.spacing.xs,
   },
+  // Violet: the brand colour for a selection.
   choiceSelected: {
-    backgroundColor: c.primary,
-    borderColor: c.primary,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   choiceText: {
     color: c.text,
@@ -556,7 +571,6 @@ const useStyles = makeStyles((c) => ({
     textAlign: 'center',
     marginTop: Theme.spacing.sm - Theme.spacing.md, // 8 below the box; parent gap is 16
   },
-  // Matches the card's width, which already sits 16 in from each screen edge.
   viewShift: {
     marginTop: Theme.spacing.xs, // 20 below Frank's line; parent gap is 16
   },
@@ -581,7 +595,8 @@ const useStyles = makeStyles((c) => ({
     borderRadius: Theme.borderRadius.full,
   },
   pillSelected: {
-    backgroundColor: c.primary,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   pillText: {
     color: c.text,
@@ -597,18 +612,28 @@ const useStyles = makeStyles((c) => ({
     fontSize: Theme.fontSize.sm,
     marginTop: Theme.spacing.sm,
   },
+  // A compact pill under the card, on the card's own surface colour.
   skip: {
-    height: MIN_TOUCH_TARGET,
+    alignSelf: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
+    gap: Theme.spacing.sm,
+    minHeight: MIN_TOUCH_TARGET,
+    paddingHorizontal: Theme.spacing.md + Theme.spacing.xs, // 20
+    backgroundColor: c.surface,
     borderColor: c.border,
-    borderWidth: 1.5,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: Theme.borderRadius.full,
     marginTop: Theme.spacing.sm + Theme.spacing.xs, // 12
+    shadowColor: Colors.navy,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
   skipPressed: {
-    opacity: 0.6,
+    backgroundColor: c.accentSoft,
+    borderColor: c.accent,
   },
   skipNote: {
     color: c.textSecondary,
@@ -618,8 +643,11 @@ const useStyles = makeStyles((c) => ({
     textAlign: 'center',
   },
   skipText: {
-    color: c.textSecondary,
+    color: c.text,
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: 14,
+  },
+  skipTextPressed: {
+    color: c.accentText,
   },
 }));

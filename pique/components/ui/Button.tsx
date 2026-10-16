@@ -57,9 +57,10 @@ export function Button({
 }
 
 const useStyles = makeStyles((c) => ({
+  // One corner radius (16) for every full-width button in the app.
   button: {
     backgroundColor: c.primary,
-    borderRadius: Theme.borderRadius.md,
+    borderRadius: Theme.borderRadius.lg,
     paddingVertical: Theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -69,7 +70,6 @@ const useStyles = makeStyles((c) => ({
     backgroundColor: 'transparent',
     borderColor: c.text,
     borderWidth: 1.5,
-    borderRadius: Theme.borderRadius.lg,
     // Without padding, minHeight sets it to exactly 56 including the border.
     paddingVertical: 0,
   },
