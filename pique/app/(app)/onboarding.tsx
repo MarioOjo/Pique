@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, writeBatch } from 'firebase/firestore';
+import { useRouter } from 'expo-router';
+import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { InterestChip } from '@/components/ui/InterestChip';
 import { LogoMark } from '@/components/ui/LogoMark';
@@ -11,14 +12,17 @@ import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
+import { ONBOARDING_STEPS, STEP } from '@/lib/onboarding';
 import { INTERESTS, seedInterests } from '@/lib/seedInterests';
 import type { UserInterest } from '@/types';
 
 const MIN_SELECTED = 3;
 
 export default function OnboardingScreen() {
+  const router = useRouter();
   const { user, piqueUser } = useAuth();
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [loadedSaved, setLoadedSaved] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +30,25 @@ export default function OnboardingScreen() {
     // Chips render from the local list, so a failed seed doesn't block onboarding.
     seedInterests().catch((e: unknown) => console.warn('Failed to seed interests', e));
   }, []);
+
+  // Coming back to this step (or resuming onboarding): start from the topics
+  // already saved.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    getDocs(collection(db, 'users', user.uid, 'interests'))
+      .then((snapshot) => {
+        if (cancelled || snapshot.empty) return;
+        setSelected(new Set(snapshot.docs.map((d) => d.id)));
+      })
+      .catch((e: unknown) => console.warn('Failed to load saved topics', e))
+      .finally(() => {
+        if (!cancelled) setLoadedSaved(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const toggle = useCallback((id: string) => {
     setSelected((prev) => {
@@ -36,25 +59,35 @@ export default function OnboardingScreen() {
     });
   }, []);
 
-  const canContinue = selected.size >= MIN_SELECTED;
+  // Waits for saved topics to load so Continue never works from a stale list.
+  const canContinue = loadedSaved && selected.size >= MIN_SELECTED;
 
   const handleContinue = async () => {
     if (!canContinue || !user || submitting) return;
     setError(null);
     setSubmitting(true);
     try {
+      // Rules only allow creating a topic (at 1.0) or deleting it, so saved
+      // topics that are still picked are left alone.
+      const interests = collection(db, 'users', user.uid, 'interests');
+      const saved = new Set((await getDocs(interests)).docs.map((d) => d.id));
       const batch = writeBatch(db);
       selected.forEach((interestId) => {
+        if (saved.has(interestId)) return;
         const interest: UserInterest = { interestId, weight: 1.0 };
-        batch.set(doc(db, 'users', user.uid, 'interests', interestId), interest);
+        batch.set(doc(interests, interestId), interest);
       });
-      batch.update(doc(db, 'users', user.uid), { onboardingComplete: true });
-      // The profile listener in useAuth sees onboardingComplete and the root
-      // layout redirects to the feed, so no manual navigation here.
+      saved.forEach((interestId) => {
+        if (!selected.has(interestId)) batch.delete(doc(interests, interestId));
+      });
       await batch.commit();
+      // Onboarding carries on with the profile questions; the summary step
+      // sets onboardingComplete.
+      router.push('/onboarding-why');
     } catch (e) {
       console.warn('Failed to save interests', e);
       setError('We couldn’t save your topics. Check your connection and try again.');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -68,8 +101,7 @@ export default function OnboardingScreen() {
       {welcome && <WelcomeBanner message={welcome} />}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <LogoMark />
-        {/* Step 3 of 3: after the two intro pages. */}
-        <ProgressDots total={3} current={3} />
+        <ProgressDots total={ONBOARDING_STEPS} current={STEP.topics} />
 
         <View style={styles.header}>
           <Text style={styles.heading}>What do you want to think about?</Text>

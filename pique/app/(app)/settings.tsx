@@ -21,11 +21,11 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { SESSION_SIZE } from '@/hooks/useCards';
 import { REMINDER_TIMES, useReminderPrefs } from '@/hooks/useReminderPrefs';
 import { useStats } from '@/hooks/useStats';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { AVATAR_PRESETS } from '@/lib/avatars';
+import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
 import { db } from '@/lib/firebase';
 
 const MIN_TOUCH_TARGET = 44;
@@ -285,7 +285,7 @@ export default function SettingsScreen() {
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Cards per session</Text>
-              <Text style={[styles.rowValue, styles.rowValueMuted]}>{SESSION_SIZE}</Text>
+              <Text style={[styles.rowValue, styles.rowValueMuted]}>{piqueUser?.sessionSize ?? DEFAULT_SESSION_SIZE}</Text>
             </View>
           </View>
 
