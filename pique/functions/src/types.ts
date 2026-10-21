@@ -7,6 +7,10 @@ export interface GeneratedCard {
   prompt: string; // what the user is asked to respond to
   counterpoint?: string; // for perspective cards — the other side
   difficulty: number; // 1-5
+  // A photo for the card; missing if none could be found.
+  imageUrl?: string;
+  imageCredit?: string;
+  imageAlt?: string;
 }
 
 export interface InterestWeight {

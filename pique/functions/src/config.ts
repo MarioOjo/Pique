@@ -5,6 +5,8 @@ import {defineSecret} from "firebase-functions/params";
 // hardcoded. Read it with anthropicApiKey.value() inside a function that
 // lists it in its `secrets` option.
 export const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+// For each card's photo search. Set the same way as PIXABAY_API_KEY.
+export const pixabayApiKey = defineSecret("PIXABAY_API_KEY");
 
 export const config = {
   anthropic: {
