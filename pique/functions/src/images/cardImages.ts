@@ -78,6 +78,19 @@ async function store(sourceUrl: string, cardId: string): Promise<string> {
     `${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
 
+// Enough tags to describe the photo without a long list being read out.
+const ALT_TAG_COUNT = 4;
+
+/**
+ * Turns Pixabay's tag list, which repeats itself, into a short description.
+ * @param {string} tags Comma-separated tags.
+ * @return {string} The first few distinct tags, e.g. "rugby, stadium".
+ */
+function describe(tags: string): string {
+  const distinct = [...new Set(tags.split(",").map((tag) => tag.trim()))];
+  return distinct.filter(Boolean).slice(0, ALT_TAG_COUNT).join(", ");
+}
+
 /**
  * Finds, stores and describes a photo for a card. Tries Frank's search
  * phrase first, then the topic. A card without a photo still works, so
@@ -99,7 +112,7 @@ export async function findCardImage(
     return {
       imageUrl,
       imageCredit: `${hit.user} / Pixabay`,
-      imageAlt: `Photo: ${hit.tags}`,
+      imageAlt: `Photo: ${describe(hit.tags)}`,
     };
   } catch (error) {
     logger.warn("Card image failed", {
