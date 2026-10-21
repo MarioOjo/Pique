@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/Button';
 import { LevelProgress } from '@/components/ui/LevelProgress';
 import { Colors, darkColors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { useAuth } from '@/hooks/useAuth';
+import { useBadges } from '@/hooks/useBadges';
 import type { SessionAnswer } from '@/hooks/useCards';
 import { useSessionVerdict } from '@/hooks/useSessionVerdict';
+import { useStats } from '@/hooks/useStats';
 import { makeStyles } from '@/hooks/useTheme';
 import { levelFor } from '@/lib/levels';
 
@@ -16,8 +19,6 @@ interface SessionCompleteProps {
   bestStreak: number;
   // This session's answers, scored live for Frank's verdict.
   answers: SessionAnswer[];
-  // The user's points total, including this session once it's scored.
-  points: number;
   // False after the last session of the day: no new session is offered.
   moreToday: boolean;
   onStartNewSession: () => void;
@@ -39,7 +40,6 @@ export function SessionComplete({
   topicsExplored,
   bestStreak,
   answers,
-  points,
   moreToday,
   onStartNewSession,
   onViewProfile,
@@ -47,6 +47,11 @@ export function SessionComplete({
   const styles = useStyles();
   const wait = useFreshCardsCountdown();
   const verdict = useSessionVerdict(answers);
+  const { user } = useAuth();
+  // Live, so points and badges catch up as the scores land.
+  const { stats: userStats, loading: statsLoading } = useStats(user?.uid);
+  const { points } = userStats;
+  const { newlyEarned } = useBadges(user?.uid, userStats, statsLoading, { announce: true });
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
@@ -146,6 +151,17 @@ export function SessionComplete({
             ⬆ Level up! You’ve reached {levelNow.name}.
           </Text>
         )}
+        {newlyEarned.map((badge) => (
+          <View key={badge.id} style={styles.newBadge} accessibilityRole="alert">
+            <Text style={styles.newBadgeEmoji} accessibilityElementsHidden>
+              {badge.emoji}
+            </Text>
+            <View style={styles.newBadgeText}>
+              <Text style={styles.newBadgeLabel}>NEW BADGE</Text>
+              <Text style={styles.newBadgeName}>{badge.name}</Text>
+            </View>
+          </View>
+        ))}
         <LevelProgress points={points} onDark />
       </View>
 
@@ -316,6 +332,31 @@ const useStyles = makeStyles(() => ({
   },
   levelBox: {
     gap: Theme.spacing.sm,
+  },
+  newBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+    backgroundColor: Colors.darkPurple,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.sm,
+  },
+  newBadgeEmoji: {
+    fontSize: Theme.fontSize.xl,
+  },
+  newBadgeText: {
+    flexShrink: 1,
+  },
+  newBadgeLabel: {
+    color: Colors.amber,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.xs,
+    letterSpacing: 1,
+  },
+  newBadgeName: {
+    color: Colors.white,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: Theme.fontSize.md,
   },
   levelUp: {
     color: Colors.amber,
