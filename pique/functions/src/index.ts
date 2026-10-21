@@ -207,9 +207,12 @@ export const generateCards = onCall(
     // One photo per card, searched in parallel. A card whose photo can't
     // be found is saved without one.
     const refs = generatedCards.map(() => db.collection("cards").doc());
-    const images = await Promise.all(generatedCards.map((card, i) =>
-      findCardImage(refs[i].id, card.imageQuery, INTEREST_NAMES[interestId]),
-    ));
+    // Skipped on the emulator, which has no Storage to save photos to.
+    const images = process.env.FUNCTIONS_EMULATOR === "true" ?
+      generatedCards.map(() => null) :
+      await Promise.all(generatedCards.map((card, i) =>
+        findCardImage(refs[i].id, card.imageQuery, INTEREST_NAMES[interestId]),
+      ));
 
     const cards: StoredCard[] = generatedCards.map((draft, i) => {
       const ref = refs[i];

@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { OptionCard, QuestionScreen, useSaveAnswer } from '@/components/onboarding/QuestionScreen';
 import { useAuth } from '@/hooks/useAuth';
-import { DEFAULT_SESSION_SIZE, SESSION_SIZES, STEP, type SessionSize } from '@/lib/onboarding';
+import {
+  DAILY_CARD_LIMIT,
+  DEFAULT_SESSION_SIZE,
+  SESSION_SIZES,
+  STEP,
+  type SessionSize,
+} from '@/lib/onboarding';
 
 const NEXT = '/onboarding-summary';
 
@@ -17,7 +23,7 @@ export default function OnboardingRhythmScreen() {
     <QuestionScreen
       step={STEP.rhythm}
       heading="How long should a session be?"
-      subheading="Each session ends after this many cards. Start another whenever you like."
+      subheading={`Each session ends after this many cards. You can do up to ${DAILY_CARD_LIMIT} cards a day, so shorter sessions mean more of them.`}
       error={error}
       saving={saving}
       canContinue={selected !== null}
