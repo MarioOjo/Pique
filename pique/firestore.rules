@@ -91,12 +91,12 @@ service cloud.firestore {
     }
 
     // Topics are picked during onboarding, and can be changed again only
-    // after 10 finished sessions, once Frank has learned something.
+    // after 3 finished sessions, once Frank has learned something.
     // Keep in sync with SESSIONS_TO_CHANGE_TOPICS in lib/topics.ts.
     function canChangeTopics(uid) {
       let profile = get(/databases/$(database)/documents/users/$(uid)).data;
       return profile.get('onboardingComplete', false) == false
-        || profile.get('sessionsCompleted', 0) >= 10;
+        || profile.get('sessionsCompleted', 0) >= 3;
     }
 
     // Seeded by the app on first onboarding. Clients may only create the

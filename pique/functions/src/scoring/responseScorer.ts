@@ -125,10 +125,12 @@ Return a JSON object with four fields:
   ("you"), saying what the response did well or what it missed. Be direct
   and fair, never mean.
 - reply: Frank talking back, one or two short sentences in plain, warm
-  words. If onTopic, engage with what they actually said: build on it,
-  offer one other angle, or ask one follow-up. Ask at most one question.
-  Don't grade them or mention the score. If not onTopic, say lightly that
-  it doesn't answer the question, and restate the question simply.
+  words. If onTopic, engage with what they actually said: build on their
+  point or add one other angle, as a statement. The user can't answer
+  back, so don't end on a question or ask them anything. Don't grade them
+  or mention the score. If not onTopic, say lightly that it doesn't
+  answer the question, and restate the question simply (they can try
+  again).
 
 Score bands:
 1-3: minimal effort or off-topic

@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { ONBOARDING_STEPS, STEP } from '@/lib/onboarding';
 import { INTERESTS, seedInterests } from '@/lib/seedInterests';
-import { MIN_TOPICS, saveTopics } from '@/lib/topics';
+import { MIN_TOPICS, saveTopics, SESSIONS_TO_CHANGE_TOPICS } from '@/lib/topics';
 
 export default function OnboardingScreen() {
   const styles = useStyles();
@@ -86,8 +86,11 @@ export default function OnboardingScreen() {
 
         <View style={styles.header}>
           <Text style={styles.heading}>What do you want to think about?</Text>
-          <Text style={styles.subheading}>
-            Pick at least 3.
+          <Text style={styles.subheading}>Pick at least {MIN_TOPICS}.</Text>
+          {/* Set expectations now, so the choice feels considered. */}
+          <Text style={styles.note}>
+            Choose the ones you really want to think about. You can change them after your
+            first {SESSIONS_TO_CHANGE_TOPICS} sessions, once Frank has learned a little about you.
           </Text>
         </View>
 
@@ -147,6 +150,13 @@ const useStyles = makeStyles((c) => ({
     color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.md,
+    textAlign: 'center',
+  },
+  note: {
+    color: c.textSecondary,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: Theme.fontSize.sm,
+    lineHeight: 19,
     textAlign: 'center',
   },
   grid: {

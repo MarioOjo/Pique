@@ -6,7 +6,7 @@ export const MIN_TOPICS = 3;
 // Sessions finished before topics can be changed, so Frank has learned
 // something first and a switch isn't just boredom. Keep in sync with
 // firestore.rules.
-export const SESSIONS_TO_CHANGE_TOPICS = 10;
+export const SESSIONS_TO_CHANGE_TOPICS = 3;
 
 // Saves the user's topics. Rules only allow creating a topic (at 1.0) or
 // deleting it, so topics that are still picked keep what Frank has learned.
