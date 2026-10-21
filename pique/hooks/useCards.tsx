@@ -16,6 +16,13 @@ export interface SessionAnswer {
   card: Card;
 }
 
+// Frank's response to a written answer.
+export interface WrittenReply {
+  reply?: string;
+  // False when the answer didn't address the question.
+  onTopic: boolean;
+}
+
 interface UseCardsResult {
   currentCard: Card | null;
   sessionCards: Card[];
@@ -27,6 +34,8 @@ interface UseCardsResult {
   loadCards: () => Promise<void>;
   submitResponse: (responseText: string, timeOnCard: number) => Promise<void>;
   skipCard: (timeOnCard: number) => void;
+  // Saves and scores a written answer at once, for Frank's reply.
+  answerInWriting: (responseText: string, timeOnCard: number) => Promise<WrittenReply | null>;
   // True until the first cards arrive.
   isLoading: boolean;
   // True while the rest of the session is still being written. The feed
@@ -165,6 +174,9 @@ export function useCards(): UseCardsResult {
   // before React re-renders.
   const indexRef = useRef(0);
   const quickAnswersInARow = useRef(0);
+  // Written attempts at the current card: whether any was on topic, and
+  // any whose scoring failed and needs retrying.
+  const written = useRef<{ cardId: string; onTopic: boolean; unscored: string[] } | null>(null);
   const [slowDownNudges, setSlowDownNudges] = useState(0);
   const [sessionAnswers, setSessionAnswers] = useState<SessionAnswer[]>([]);
 
@@ -182,6 +194,7 @@ export function useCards(): UseCardsResult {
     setEngagedCount(0);
     indexRef.current = 0;
     quickAnswersInARow.current = 0;
+    written.current = null;
 
     // The first batch starts the session; later ones are shuffled in among
     // the cards not yet shown, so the topics still mix.
@@ -220,33 +233,11 @@ export function useCards(): UseCardsResult {
     }
   }, [user]);
 
-  // Records the interaction and advances. Nothing here blocks the user:
-  // the card advances first, then the write, scoring and stats run in the
-  // background. A slow or offline connection never holds up the feed;
-  // Firestore queues the write and syncs when it can.
-  const recordAndAdvance = useCallback(
-    async (responseText: string, timeOnCard: number, skipped: boolean) => {
-      const index = indexRef.current;
-      const load = loadId.current;
-      const card = sessionCards[index];
-      if (!card) return;
-
-      indexRef.current = index + 1;
-      setCurrentIndex(index + 1);
-      if (!skipped) {
-        setEngagedCount((count) => count + 1);
-        // The same limit the server scores against. Skips don't count
-        // either way.
-        const quick = timeOnCard < minReadingTimeMs(`${card.body} ${card.prompt}`);
-        quickAnswersInARow.current = quick ? quickAnswersInARow.current + 1 : 0;
-        if (quickAnswersInARow.current >= QUICK_ANSWERS_BEFORE_NUDGE) {
-          quickAnswersInARow.current = 0;
-          setSlowDownNudges((count) => count + 1);
-        }
-      }
-
-      if (!user) return;
-      let interactionId: string;
+  // Saves an interaction. Resolves to its ID, or null if there's no user or
+  // the write failed.
+  const record = useCallback(
+    async (card: Card, responseText: string, timeOnCard: number, skipped: boolean) => {
+      if (!user) return null;
       try {
         const ref = await addDoc(collection(db, 'interactions'), {
           userId: user.uid,
@@ -257,20 +248,40 @@ export function useCards(): UseCardsResult {
           skipped,
           createdAt: serverTimestamp(),
         });
-        interactionId = ref.id;
-        if (!skipped && load === loadId.current) {
-          setSessionAnswers((answers) => [...answers, { interactionId, card }]);
-        }
+        return ref.id;
       } catch (e) {
         console.warn('Failed to record interaction', e);
-        return;
+        return null;
       }
+    },
+    [user],
+  );
 
-      // Runs once the write is confirmed, so the functions can read it.
+  // Moves to the next card, counting an answer and watching for rushing.
+  const advance = useCallback((card: Card, timeOnCard: number, answered: boolean) => {
+    const index = indexRef.current;
+    indexRef.current = index + 1;
+    setCurrentIndex(index + 1);
+    if (!answered) return;
+    setEngagedCount((count) => count + 1);
+    // The same limit the server scores against. Skips don't count either way.
+    const quick = timeOnCard < minReadingTimeMs(`${card.body} ${card.prompt}`);
+    quickAnswersInARow.current = quick ? quickAnswersInARow.current + 1 : 0;
+    if (quickAnswersInARow.current >= QUICK_ANSWERS_BEFORE_NUDGE) {
+      quickAnswersInARow.current = 0;
+      setSlowDownNudges((count) => count + 1);
+    }
+  }, []);
+
+  // Scores and updates stats without holding anything up.
+  const finishInBackground = useCallback(
+    async (interactionIds: string[], answered: boolean) => {
+      if (!user) return;
+      // Runs once the writes are confirmed, so the functions can read them.
       // Skips are scored too (they lower the interest's weight) but don't
-      // change stats, which only count responses.
-      const background: Promise<unknown>[] = [scoreResponse(interactionId)];
-      if (!skipped) background.push(updateStats(user.uid));
+      // change stats, which only count answers.
+      const background: Promise<unknown>[] = interactionIds.map((id) => scoreResponse(id));
+      if (answered) background.push(updateStats(user.uid));
       const results = await Promise.allSettled(background);
       results.forEach((result) => {
         if (result.status === 'rejected') {
@@ -278,21 +289,99 @@ export function useCards(): UseCardsResult {
         }
       });
     },
-    [sessionCards, user],
+    [user],
   );
 
+  // A written answer: saved and scored straight away, so Frank can reply
+  // on the card. Resolves to his reply, or null if saving or scoring
+  // failed (the card still works; scoring is retried on Next).
+  const answerInWriting = useCallback(
+    async (responseText: string, timeOnCard: number): Promise<WrittenReply | null> => {
+      const card = sessionCards[indexRef.current];
+      if (!card) return null;
+      const load = loadId.current;
+      const attempts =
+        written.current?.cardId === card.id
+          ? written.current
+          : { cardId: card.id, onTopic: false, unscored: [] as string[] };
+      written.current = attempts;
+
+      const interactionId = await record(card, responseText, timeOnCard, false);
+      if (!interactionId) return null;
+      try {
+        const result = await scoreResponse(interactionId);
+        if (result.onTopic) {
+          attempts.onTopic = true;
+          if (load === loadId.current) {
+            setSessionAnswers((answers) => [...answers, { interactionId, card }]);
+          }
+          // The user gave up waiting and moved on, so Next didn't count
+          // this answer; bring the stats up to date now.
+          if (written.current !== attempts && user) {
+            updateStats(user.uid).catch((e: unknown) => console.warn('Stats update failed', e));
+          }
+        }
+        return { reply: result.reply, onTopic: result.onTopic };
+      } catch (e) {
+        console.warn('Scoring a written answer failed', e);
+        attempts.unscored.push(interactionId);
+        if (load === loadId.current) {
+          setSessionAnswers((answers) => [...answers, { interactionId, card }]);
+        }
+        return null;
+      }
+    },
+    [sessionCards, record, user],
+  );
+
+  // Called from Next. Nothing here blocks the user: the card advances
+  // first, then the write, scoring and stats run in the background. A slow
+  // or offline connection never holds up the feed; Firestore queues the
+  // write and syncs when it can.
   const submitResponse = useCallback(
-    (responseText: string, timeOnCard: number) =>
-      recordAndAdvance(responseText, timeOnCard, false),
-    [recordAndAdvance],
+    async (responseText: string, timeOnCard: number) => {
+      const card = sessionCards[indexRef.current];
+      if (!card) return;
+
+      // Already saved and scored by answerInWriting. It counts as an answer
+      // unless every attempt was off-topic.
+      const attempts = written.current;
+      if (attempts?.cardId === card.id) {
+        written.current = null;
+        const answered = attempts.onTopic || attempts.unscored.length > 0;
+        advance(card, timeOnCard, answered);
+        void finishInBackground(attempts.unscored, answered);
+        return;
+      }
+
+      const load = loadId.current;
+      advance(card, timeOnCard, true);
+      const interactionId = await record(card, responseText, timeOnCard, false);
+      if (!interactionId) return;
+      if (load === loadId.current) {
+        setSessionAnswers((answers) => [...answers, { interactionId, card }]);
+      }
+      await finishInBackground([interactionId], true);
+    },
+    [sessionCards, advance, record, finishInBackground],
   );
 
   const skipCard = useCallback(
     (timeOnCard: number) => {
-      void recordAndAdvance('', timeOnCard, true);
+      const card = sessionCards[indexRef.current];
+      if (!card) return;
+      // A card skipped after an off-topic attempt keeps that attempt; it
+      // just doesn't count.
+      if (written.current?.cardId === card.id) written.current = null;
+      advance(card, timeOnCard, false);
+      void (async () => {
+        const interactionId = await record(card, '', timeOnCard, true);
+        if (interactionId) await finishInBackground([interactionId], false);
+      })();
     },
-    [recordAndAdvance],
+    [sessionCards, advance, record, finishInBackground],
   );
+
 
   // While cards are still arriving, count the whole planned session so the
   // progress bar doesn't jump.
@@ -310,6 +399,7 @@ export function useCards(): UseCardsResult {
     loadCards,
     submitResponse,
     skipCard,
+    answerInWriting,
     isLoading,
     isLoadingMore,
     error,

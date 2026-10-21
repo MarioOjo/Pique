@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Pressable, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
@@ -7,18 +7,30 @@ import { looksLikeGibberish } from '@/lib/answerCheck';
 import { INTERESTS } from '@/lib/seedInterests';
 import { Theme } from '@/constants/theme';
 import { makeStyles, useTheme } from '@/hooks/useTheme';
+import type { WrittenReply } from '@/hooks/useCards';
 import type { Card } from '@/types';
 
 interface CardComponentProps {
   card: Card;
   onSubmit: (responseText: string, timeOnCard: number) => void;
   onSkip: (timeOnCard: number) => void;
+  // Saves and scores a written answer at Submit, for Frank's reply.
+  onWrite?: (responseText: string, timeOnCard: number) => Promise<WrittenReply | null>;
   cardNumber: number;
   totalCards: number;
 }
 
 type Choice = 'agree' | 'disagree';
 type ViewShift = 'yes' | 'no';
+// Frank's reply to a written answer, from Submit until it arrives.
+type ReplyState =
+  | { status: 'idle' }
+  | { status: 'waiting' }
+  | { status: 'done'; reply?: string; onTopic: boolean }
+  | { status: 'failed' };
+
+// After this, stop waiting for Frank's reply and let the user move on.
+const REPLY_TIMEOUT_MS = 15000;
 
 const MIN_RECALL_LENGTH = 20;
 const MIN_TOUCH_TARGET = 44;
@@ -67,6 +79,11 @@ function capitalise(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+// Milliseconds since a Date.now() timestamp.
+function msSince(start: number): number {
+  return Date.now() - start;
+}
+
 function pickRandom<T>(items: readonly T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
@@ -77,6 +94,7 @@ export function CardComponent({
   card,
   onSubmit,
   onSkip,
+  onWrite,
   cardNumber,
   totalCards,
 }: CardComponentProps) {
@@ -91,6 +109,7 @@ export function CardComponent({
   // Set when Frank has queried an answer that looks like keyboard mashing.
   // The button then reads "Send anyway", so a real answer is never stuck.
   const [nudged, setNudged] = useState(false);
+  const [replyState, setReplyState] = useState<ReplyState>({ status: 'idle' });
   const [imageFailed, setImageFailed] = useState(false);
   // Picked once on mount, so they stay the same for this card.
   const [counterpointLabel] = useState(() => pickRandom(COUNTERPOINT_LABELS));
@@ -167,7 +186,7 @@ export function CardComponent({
   const handleSkip = () => {
     if (isDone.current || isSubmitting) return;
     isDone.current = true;
-    const elapsed = Date.now() - startTime;
+    const elapsed = msSince(startTime);
     setIsSkipping(true);
     skipAnimation.current = Animated.sequence([
       Animated.delay(SKIP_NOTE_MS),
@@ -190,7 +209,7 @@ export function CardComponent({
       setNudged(true);
       return;
     }
-    answerTime.current = Date.now() - startTime;
+    answerTime.current = msSince(startTime);
     setIsSubmitting(true);
     Animated.parallel([
       Animated.sequence([
@@ -202,7 +221,35 @@ export function CardComponent({
         Animated.timing(borderFlash, { toValue: 1, duration: FLASH_MS / 2, useNativeDriver: false }),
         Animated.timing(borderFlash, { toValue: 0, duration: FLASH_MS / 2, useNativeDriver: false }),
       ]),
-    ]).start(() => setHasSubmitted(true));
+    ]).start(() => {
+      setHasSubmitted(true);
+      if (!isPerspective && onWrite) askFrank();
+    });
+  };
+
+  // Sends the written answer to Frank and waits for his reply.
+  const askFrank = () => {
+    setReplyState({ status: 'waiting' });
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) setReplyState({ status: 'failed' });
+    }, REPLY_TIMEOUT_MS);
+    onWrite?.(responseText.trim(), answerTime.current).then((result) => {
+      settled = true;
+      clearTimeout(timer);
+      setReplyState(
+        result ? { status: 'done', reply: result.reply, onTopic: result.onTopic } : { status: 'failed' },
+      );
+    });
+  };
+
+  // After an off-topic answer: back to the text box for another go.
+  const handleTryAgain = () => {
+    setReplyState({ status: 'idle' });
+    setHasSubmitted(false);
+    setIsSubmitting(false);
+    setNudged(false);
+    ackOpacity.setValue(0);
   };
 
   const handleChoicePressIn = (choice: Choice) => {
@@ -342,12 +389,29 @@ export function CardComponent({
                       <Text style={styles.counterpointText}>{card.counterpoint}</Text>
                     </Animated.View>
                   )}
-                  <Animated.Text
-                    style={[styles.acknowledgement, { opacity: ackOpacity }]}
-                    accessibilityLiveRegion="polite"
-                  >
-                    {acknowledgement}
-                  </Animated.Text>
+                  {replyState.status === 'waiting' && (
+                    <View style={styles.frankReading} accessibilityLiveRegion="polite">
+                      <ActivityIndicator color={colors.accent} />
+                      <Text style={styles.frankReadingText}>Frank is reading your answer…</Text>
+                    </View>
+                  )}
+                  {replyState.status === 'done' && replyState.reply ? (
+                    <View style={styles.counterpoint} accessibilityLiveRegion="polite">
+                      <Text style={styles.counterpointLabel}>
+                        {replyState.onTopic ? 'Frank says:' : 'Frank’s not sure that answers it:'}
+                      </Text>
+                      <Text style={styles.counterpointText}>{replyState.reply}</Text>
+                    </View>
+                  ) : (
+                    replyState.status !== 'waiting' && (
+                      <Animated.Text
+                        style={[styles.acknowledgement, { opacity: ackOpacity }]}
+                        accessibilityLiveRegion="polite"
+                      >
+                        {acknowledgement}
+                      </Animated.Text>
+                    )
+                  )}
                   {isPerspective && card.counterpoint && (
                     <Animated.View style={[styles.viewShift, { opacity: viewShiftOpacity }]}>
                       <Text style={styles.viewShiftQuestion}>Did that shift your view?</Text>
@@ -376,7 +440,12 @@ export function CardComponent({
                       )}
                     </Animated.View>
                   )}
-                  <Button title="Next card →" onPress={handleNext} />
+                  {replyState.status === 'done' && !replyState.onTopic && (
+                    <Button title="Try again" variant="outline" onPress={handleTryAgain} />
+                  )}
+                  {replyState.status !== 'waiting' && (
+                    <Button title="Next card →" onPress={handleNext} />
+                  )}
                 </>
               ) : (
                 <Animated.View style={{ transform: [{ scale: submitScale }] }}>
@@ -587,6 +656,17 @@ const useStyles = makeStyles((c) => ({
     fontFamily: Theme.fontFamily.regular,
     fontSize: 14,
     lineHeight: 20,
+  },
+  frankReading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Theme.spacing.sm,
+  },
+  frankReadingText: {
+    color: c.textSecondary,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 14,
+    fontStyle: 'italic',
   },
   acknowledgement: {
     color: c.textSecondary,

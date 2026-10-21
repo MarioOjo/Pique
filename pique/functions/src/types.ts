@@ -60,6 +60,12 @@ export interface UpdateStatsResult {
 export interface ScoreResponseResult {
   score: number;
   message: string;
+  // Frank's reply to a written answer, shown on the card. Missing for
+  // choices, skips and most pre-checks.
+  reply?: string;
+  // False when the answer doesn't address the card's question. Off-topic
+  // answers are kept but don't count towards stats, points or badges.
+  onTopic: boolean;
 }
 
 export interface DeleteAccountResult {

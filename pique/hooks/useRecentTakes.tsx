@@ -84,6 +84,8 @@ export function useRecentTakes(userId: string | undefined): {
       async (snapshot) => {
         const loaded = await Promise.all(
           snapshot.docs.map(async (interaction): Promise<RecentTake | null> => {
+            // Off-topic attempts are kept on record but aren't takes.
+            if (interaction.get('onTopic') === false) return null;
             const card = await loadCard(String(interaction.get('cardId')));
             if (!card) return null;
             return {
