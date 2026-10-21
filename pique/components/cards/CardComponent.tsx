@@ -487,17 +487,20 @@ const useStyles = makeStyles((c) => ({
     letterSpacing: 2,
     marginBottom: Theme.spacing.sm,
   },
+  // The context sits back a little so the question stands out below it.
   body: {
     color: c.text,
-    fontFamily: Theme.fontFamily.semiBold,
-    fontSize: 18,
+    fontFamily: Theme.fontFamily.regular,
+    fontSize: 17,
     lineHeight: 26,
   },
+  // Frank's question: the largest text on the card, in his violet.
   prompt: {
-    color: c.textSecondary,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: 14,
-    marginTop: Theme.spacing.sm,
+    color: c.accentText,
+    fontFamily: Theme.fontFamily.semiBold,
+    fontSize: 19,
+    lineHeight: 27,
+    marginTop: Theme.spacing.md,
   },
   response: {
     marginTop: CONTENT_PADDING,

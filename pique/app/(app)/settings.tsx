@@ -22,7 +22,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
-import { makeStyles, useTheme, type AppearancePreference } from '@/hooks/useTheme';
+import { makeStyles, useTheme, type AppearancePreference, type TextSize } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { REMINDER_TIMES, useReminderPrefs } from '@/hooks/useReminderPrefs';
 import { useStats } from '@/hooks/useStats';
@@ -40,7 +40,7 @@ const ALL_INTERESTS = Number.POSITIVE_INFINITY;
 
 export default function SettingsScreen() {
   const styles = useStyles();
-  const { colors, preference, setPreference } = useTheme();
+  const { colors, preference, setPreference, textSize, setTextSize } = useTheme();
   const router = useRouter();
   const { user, piqueUser, signOut } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
@@ -458,6 +458,37 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.divider} />
             <View style={styles.row}>
+              <Text style={styles.rowLabel}>Text size</Text>
+              <View style={styles.timeOptions} accessibilityRole="radiogroup">
+                {TEXT_SIZE_OPTIONS.map((option) => {
+                  const selected = textSize === option.value;
+                  return (
+                    <Pressable
+                      key={option.value}
+                      style={[styles.timePill, selected && styles.timePillSelected]}
+                      onPress={() => setTextSize(option.value)}
+                      hitSlop={TIME_PILL_HIT_SLOP}
+                      accessibilityRole="radio"
+                      accessibilityLabel={`Text size: ${option.label}`}
+                      accessibilityState={{ selected }}
+                    >
+                      <Text
+                        style={[
+                          styles.timeText,
+                          selected && styles.timeTextSelected,
+                          // A fixed preview of each size, so it isn't scaled itself.
+                          { fontSize: option.previewSize, lineHeight: option.previewSize + 6 },
+                        ]}
+                      >
+                        A
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.row}>
               <Text style={styles.rowLabel}>Version</Text>
               <Text style={styles.rowValue}>{APP_VERSION}</Text>
             </View>
@@ -472,6 +503,14 @@ export default function SettingsScreen() {
     </SafeAreaView>
   );
 }
+
+// Each step enlarges all the app's text (see TEXT_SCALE in hooks/useTheme.tsx).
+// Shown as an "A" at a growing size; the label is for screen readers.
+const TEXT_SIZE_OPTIONS: readonly { value: TextSize; label: string; previewSize: number }[] = [
+  { value: 'standard', label: 'Standard', previewSize: 13 },
+  { value: 'large', label: 'Large', previewSize: 16 },
+  { value: 'larger', label: 'Larger', previewSize: 19 },
+];
 
 // "System" follows the phone's light or dark setting.
 const APPEARANCE_OPTIONS: readonly { value: AppearancePreference; label: string }[] = [
@@ -614,11 +653,15 @@ const useStyles = makeStyles((c) => ({
     fontSize: 12,
   },
   timeOptions: {
+    flexShrink: 1,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     gap: Theme.spacing.xs + Theme.spacing.xs / 2, // 6
   },
   timePill: {
-    height: Theme.spacing.xl, // 32
+    minWidth: MIN_TOUCH_TARGET,
+    minHeight: Theme.spacing.xl, // 32
     paddingHorizontal: Theme.spacing.sm + Theme.spacing.xs,
     borderRadius: Theme.borderRadius.full,
     backgroundColor: c.background,

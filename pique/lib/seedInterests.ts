@@ -16,6 +16,7 @@ export const INTERESTS: readonly Interest[] = [
   { id: 'gaming', name: 'Gaming', emoji: '🎮' },
   { id: 'food', name: 'Food', emoji: '🍜' },
   { id: 'history', name: 'History', emoji: '📜' },
+  { id: 'sport', name: 'Sport', emoji: '⚽' },
 ];
 
 // Creates any missing interest docs. Existing docs are left untouched, and

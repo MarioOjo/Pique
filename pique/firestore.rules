@@ -94,7 +94,8 @@ service cloud.firestore {
       allow create: if signedIn()
         && interestId in ['philosophy', 'science', 'technology', 'culture',
                           'psychology', 'economics', 'art', 'politics',
-                          'pop-culture', 'gaming', 'food', 'history']
+                          'pop-culture', 'gaming', 'food', 'history',
+                          'sport']
         && request.resource.data.keys().hasOnly(['id', 'name', 'emoji', 'createdAt'])
         && request.resource.data.id == interestId
         && request.resource.data.name is string

@@ -38,6 +38,7 @@ export default function FeedScreen() {
     submitResponse,
     skipCard,
     isLoading,
+    isLoadingMore,
     error,
     usingFallbackCards,
     outOfCardsToday,
@@ -111,6 +112,16 @@ export default function FeedScreen() {
           <View style={styles.action}>
             <Button title="Try again" onPress={loadCards} />
           </View>
+        </View>
+      );
+    }
+
+    // Answered every card that's arrived; the rest are still being written.
+    if (!currentCard && isLoadingMore) {
+      return (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.accent} />
+          <Text style={[styles.message, styles.loadingMessage]}>Frank is finishing your next card…</Text>
         </View>
       );
     }

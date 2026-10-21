@@ -21,7 +21,11 @@ interface UseCardsResult {
   loadCards: () => Promise<void>;
   submitResponse: (responseText: string, timeOnCard: number) => Promise<void>;
   skipCard: (timeOnCard: number) => void;
+  // True until the first cards arrive.
   isLoading: boolean;
+  // True while the rest of the session is still being written. The feed
+  // shows the first cards in the meantime.
+  isLoadingMore: boolean;
   error: string | null;
   // True when generation failed and the session uses sample cards.
   usingFallbackCards: boolean;
@@ -74,17 +78,24 @@ const isDailyLimitError = (reason: unknown) =>
   reason instanceof FirebaseError && reason.code === 'functions/resource-exhausted';
 
 // Generates a session's worth of cards across the user's top interests,
-// in parallel. Interests whose generation fails are left out.
+// in parallel. Each interest's cards are handed to onCards as soon as they
+// arrive, so the feed can start before the slowest call finishes.
+// Interests whose generation fails are left out.
 async function generateSessionCards(
   userId: string,
   sessionSize: number,
+  onCards: (cards: Card[]) => void,
 ): Promise<GeneratedSession> {
   const interests = await getTopInterests(userId);
   if (interests.length === 0) return { cards: [], limitReached: false, remainingToday: null };
 
   const counts = distributeCards(sessionSize, interests.length);
   const results = await Promise.allSettled(
-    interests.map((interest, i) => generateCards(userId, interest.interestId, counts[i])),
+    interests.map(async (interest, i) => {
+      const result = await generateCards(userId, interest.interestId, counts[i]);
+      if (result.cards.length > 0) onCards(result.cards);
+      return result;
+    }),
   );
 
   const cards: Card[] = [];
@@ -133,6 +144,11 @@ export function useCards(): UseCardsResult {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [engagedCount, setEngagedCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // The session size this load is aiming for.
+  const [plannedSize, setPlannedSize] = useState(0);
+  // Identifies the latest load, so cards from an older one are ignored.
+  const loadId = useRef(0);
   const [error, setError] = useState<string | null>(null);
   const [usingFallbackCards, setUsingFallbackCards] = useState(false);
   const [outOfCardsToday, setOutOfCardsToday] = useState(false);
@@ -144,32 +160,53 @@ export function useCards(): UseCardsResult {
   const [slowDownNudges, setSlowDownNudges] = useState(0);
 
   const loadCards = useCallback(async () => {
+    const id = ++loadId.current;
+    const size = sessionSizeRef.current;
     setIsLoading(true);
+    setIsLoadingMore(true);
+    setPlannedSize(size);
     setError(null);
+    setSessionCards([]);
+    setUsingFallbackCards(false);
+    setCurrentIndex(0);
+    setEngagedCount(0);
+    indexRef.current = 0;
+    quickAnswersInARow.current = 0;
+
+    // The first batch starts the session; later ones are shuffled in among
+    // the cards not yet shown, so the topics still mix.
+    const addCards = (batch: Card[]) => {
+      if (id !== loadId.current) return;
+      setSessionCards((previous) => {
+        const shown = previous.slice(0, indexRef.current + 1);
+        const upcoming = shuffle([...previous.slice(indexRef.current + 1), ...batch]);
+        return [...shown, ...upcoming].slice(0, size);
+      });
+      setIsLoading(false);
+    };
+
     try {
       const session = user
-        ? await generateSessionCards(user.uid, sessionSizeRef.current)
+        ? await generateSessionCards(user.uid, size, addCards)
         : { cards: [], limitReached: false, remainingToday: null };
+      if (id !== loadId.current) return;
       setRemainingToday(session.remainingToday);
       setOutOfCardsToday(session.limitReached);
-      let cards = session.cards;
       // Out of cards for today is a real stop, not a failure: no samples.
-      const fallback = cards.length === 0 && !session.limitReached;
-      if (fallback) {
+      if (session.cards.length === 0 && !session.limitReached) {
         console.warn('No generated cards available; using sample cards');
-        cards = [...MOCK_CARDS];
+        setSessionCards(shuffle(MOCK_CARDS).slice(0, size));
+        setUsingFallbackCards(true);
       }
-      setSessionCards(shuffle(cards).slice(0, sessionSizeRef.current));
-      setUsingFallbackCards(fallback);
-      setCurrentIndex(0);
-      setEngagedCount(0);
-      indexRef.current = 0;
-      quickAnswersInARow.current = 0;
     } catch (e) {
+      if (id !== loadId.current) return;
       console.warn('Failed to load cards', e);
       setError('Check your connection and try again.');
     } finally {
-      setIsLoading(false);
+      if (id === loadId.current) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   }, [user]);
 
@@ -243,7 +280,11 @@ export function useCards(): UseCardsResult {
     [recordAndAdvance],
   );
 
-  const totalCards = sessionCards.length;
+  // While cards are still arriving, count the whole planned session so the
+  // progress bar doesn't jump.
+  const totalCards = isLoadingMore
+    ? Math.max(sessionCards.length, plannedSize)
+    : sessionCards.length;
 
   return {
     currentCard: sessionCards[currentIndex] ?? null,
@@ -251,11 +292,12 @@ export function useCards(): UseCardsResult {
     currentIndex,
     totalCards,
     engagedCount,
-    isSessionComplete: totalCards > 0 && currentIndex >= totalCards,
+    isSessionComplete: !isLoadingMore && totalCards > 0 && currentIndex >= totalCards,
     loadCards,
     submitResponse,
     skipCard,
     isLoading,
+    isLoadingMore,
     error,
     usingFallbackCards,
     outOfCardsToday,
