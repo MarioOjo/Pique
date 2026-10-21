@@ -217,14 +217,19 @@ export async function generateCardsForInterest(
   const interestName = INTEREST_NAMES[interestId];
   if (!interestName) throw new Error(`Unknown interest: ${interestId}`);
 
-  const response = await getAnthropicClient().messages.parse({
+  const response = await getAnthropicClient().beta.messages.parse({
     model: config.anthropic.model,
     max_tokens: config.anthropic.maxTokens,
+    betas: [config.anthropic.fallbackBeta],
+    fallbacks: "default",
     system: buildSystemPrompt(profile),
     messages: [
       {role: "user", content: buildUserPrompt(interestName, count, profile)},
     ],
-    output_config: {format: zodOutputFormat(CardBatchSchema)},
+    output_config: {
+      effort: config.anthropic.effort,
+      format: zodOutputFormat(CardBatchSchema),
+    },
   });
 
   if (response.stop_reason === "refusal") {
