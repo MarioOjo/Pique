@@ -304,13 +304,17 @@ export function CardComponent({
                 resizeMode="cover"
                 onError={() => setImageFailed(true)}
                 accessibilityIgnoresInvertColors
+                accessible={Boolean(card.imageAlt)}
+                accessibilityLabel={card.imageAlt}
               />
               <View style={styles.topicBadge}>
                 <Text style={styles.topicText}>{topicName}</Text>
               </View>
-              <View style={styles.credit}>
-                <Text style={styles.creditText}>📷 {card.imageCredit ?? 'Unsplash'}</Text>
-              </View>
+              {card.imageCredit && (
+                <View style={styles.credit}>
+                  <Text style={styles.creditText}>📷 {card.imageCredit}</Text>
+                </View>
+              )}
             </View>
           )}
 

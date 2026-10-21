@@ -24,6 +24,9 @@ interface StoredCard {
   body: string;
   prompt: string;
   counterpoint?: string;
+  imageUrl?: string;
+  imageCredit?: string;
+  imageAlt?: string;
   difficulty: number;
   status: 'active';
   createdAt: string;

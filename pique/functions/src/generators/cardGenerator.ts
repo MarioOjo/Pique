@@ -102,6 +102,7 @@ const CardSchema = z.object({
   prompt: z.string(),
   counterpoint: z.string().nullable(),
   difficulty: z.number().int(),
+  imageQuery: z.string(),
 });
 
 type ParsedCard = z.infer<typeof CardSchema>;
@@ -175,19 +176,29 @@ For each card:
 - counterpoint: the other side of the argument for perspective cards;
   null for recall cards
 - difficulty: an integer from 1 to 5
+- imageQuery: 2 to 4 plain English words to search a stock photo library
+  for a picture that fits the card, something concrete you can see (for
+  example "rugby crowd stadium" or "brain scan"). No names of real people.
 
 Mix card types — aim for roughly half perspective, half recall.
 ${difficulty}
 Make each card genuinely different in topic and angle.`;
 }
 
+// A generated card with Frank's photo search phrase, which is used once to
+// find the card's picture and not stored.
+export interface DraftCard extends GeneratedCard {
+  imageQuery: string;
+}
+
 /**
  * Normalises one schema-valid card into the stored shape.
  * @param {ParsedCard} card Card as returned by Claude.
- * @return {GeneratedCard} The normalised card.
+ * @return {DraftCard} The normalised card.
  */
-function toGeneratedCard(card: ParsedCard): GeneratedCard {
-  const generated: GeneratedCard = {
+function toGeneratedCard(card: ParsedCard): DraftCard {
+  const generated: DraftCard = {
+    imageQuery: card.imageQuery.trim(),
     type: card.type,
     body: card.body.trim(),
     prompt: card.prompt.trim(),
@@ -207,13 +218,13 @@ function toGeneratedCard(card: ParsedCard): GeneratedCard {
  * @param {string} interestId One of the keys of INTEREST_NAMES.
  * @param {number} count Number of cards to generate.
  * @param {UserProfile} profile The user's onboarding answers, if any.
- * @return {Promise<GeneratedCard[]>} The generated cards.
+ * @return {Promise<DraftCard[]>} The generated cards.
  */
 export async function generateCardsForInterest(
   interestId: string,
   count: number,
   profile: UserProfile = {},
-): Promise<GeneratedCard[]> {
+): Promise<DraftCard[]> {
   const interestName = INTEREST_NAMES[interestId];
   if (!interestName) throw new Error(`Unknown interest: ${interestId}`);
 

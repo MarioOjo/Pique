@@ -10,7 +10,8 @@ import {
   Timestamp,
   getFirestore,
 } from "firebase-admin/firestore";
-import {anthropicApiKey, config} from "./config";
+import {anthropicApiKey, config, pixabayApiKey} from "./config";
+import {findCardImage} from "./images/cardImages";
 import {
   INTEREST_NAMES,
   UserProfile,
@@ -136,7 +137,7 @@ async function releaseDailyQuota(
 }
 
 export const generateCards = onCall(
-  {secrets: [anthropicApiKey], timeoutSeconds: 120},
+  {secrets: [anthropicApiKey, pixabayApiKey], timeoutSeconds: 120},
   async (request): Promise<GenerateCardsResult> => {
     // Auth check — must be signed in
     if (!request.auth) {
@@ -203,8 +204,19 @@ export const generateCards = onCall(
     const expiresAt = new Date(createdAt);
     expiresAt.setDate(expiresAt.getDate() + config.cards.expiryDays);
 
-    const cards: StoredCard[] = generatedCards.map((card) => {
-      const ref = db.collection("cards").doc();
+    // One photo per card, searched in parallel. A card whose photo can't
+    // be found is saved without one.
+    const refs = generatedCards.map(() => db.collection("cards").doc());
+    const images = await Promise.all(generatedCards.map((card, i) =>
+      findCardImage(refs[i].id, card.imageQuery, INTEREST_NAMES[interestId]),
+    ));
+
+    const cards: StoredCard[] = generatedCards.map((draft, i) => {
+      const ref = refs[i];
+      // The search phrase was only for finding the photo.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {imageQuery, ...generated} = draft;
+      const card = {...generated, ...(images[i] ?? {})};
       batch.set(ref, {
         ...card,
         interestId,

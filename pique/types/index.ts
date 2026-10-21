@@ -14,6 +14,8 @@ export interface Card {
   counterpoint?: string;
   imageUrl?: string;
   imageCredit?: string;
+  // Describes the photo for screen readers.
+  imageAlt?: string;
   difficulty: number;
   status: CardStatus;
   // Date in app code; Timestamp when read straight from Firestore.
