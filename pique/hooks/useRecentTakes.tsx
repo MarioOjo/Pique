@@ -34,7 +34,7 @@ const PRECHECK_TAKES: Record<string, string> = {
   'Answered too quickly': 'That was quick. Give the next one a little more thought.',
 };
 
-function frankTakeFor(scoredBy: unknown, reason: unknown): string | undefined {
+export function frankTakeFor(scoredBy: unknown, reason: unknown): string | undefined {
   if (typeof reason !== 'string' || !reason) return undefined;
   if (scoredBy === 'claude') return reason;
   return PRECHECK_TAKES[reason];

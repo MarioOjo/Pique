@@ -367,9 +367,42 @@ export const scoreResponse = onCall(
       score: outcome.score,
       usedClaude: result.usedClaude,
     });
+
+    // Answers earn their score as points. Recounted from every answer
+    // rather than incremented, so it's always right and covers answers
+    // scored before points existed. A failure here doesn't undo the score.
+    if (!input.skipped) {
+      try {
+        await recountPoints(userId);
+      } catch (error) {
+        logger.error("Points recount failed", {
+          userId,
+          error: describeError(error),
+        });
+      }
+    }
     return outcome;
   },
 );
+
+/**
+ * Sets stats/{uid}.points to the sum of the user's answer scores.
+ * @param {string} userId The user whose points to recount.
+ * @return {Promise<number>} The new points total.
+ */
+async function recountPoints(userId: string): Promise<number> {
+  const snapshot = await db.collection("interactions")
+    .where("userId", "==", userId)
+    .where("skipped", "==", false)
+    .select("engagementScore")
+    .get();
+  const points = snapshot.docs.reduce(
+    (sum, doc) => sum + Number(doc.get("engagementScore") ?? 0),
+    0,
+  );
+  await db.collection("stats").doc(userId).set({points}, {merge: true});
+  return points;
+}
 
 /**
  * Recomputes the user's stats/{uid} doc (streaks and total responses)
@@ -414,13 +447,14 @@ export const updateStats = onCall(
     const {currentStreak, longestStreak} = computeStreaks(days, today);
     const totalResponses = snapshot.size;
 
+    // Merged, so the points scoreResponse keeps are left alone.
     await db.collection("stats").doc(userId).set({
       userId,
       currentStreak,
       longestStreak,
       totalResponses,
       lastActive: FieldValue.serverTimestamp(),
-    });
+    }, {merge: true});
 
     return {currentStreak, totalResponses};
   },

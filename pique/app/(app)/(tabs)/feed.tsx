@@ -44,6 +44,7 @@ export default function FeedScreen() {
     outOfCardsToday,
     moreCardsToday,
     slowDownNudges,
+    sessionAnswers,
   } = useCards();
   // Live, so the header and session summary update as soon as updateStats runs.
   const { stats } = useStats(user?.uid);
@@ -132,6 +133,8 @@ export default function FeedScreen() {
           cardsCompleted={engagedCount}
           topicsExplored={new Set(sessionCards.map((card) => card.interestId)).size}
           bestStreak={stats.longestStreak}
+          answers={sessionAnswers}
+          points={stats.points}
           moreToday={moreCardsToday}
           onStartNewSession={loadCards}
           onViewProfile={() => router.navigate('/profile')}
