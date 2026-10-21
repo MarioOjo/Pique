@@ -20,6 +20,7 @@ import {
 import {
   ScoreResult,
   adjustWeight,
+  preChecked,
   preScore,
   scoreWithClaude,
 } from "./scoring/responseScorer";
@@ -278,10 +279,7 @@ export const scoreResponse = onCall(
       throw new HttpsError("not-found", "Interaction not found");
     }
     if (interaction.scoredAt) {
-      return {
-        score: Number(interaction.engagementScore),
-        message: "Already scored",
-      };
+      return alreadyScored(interaction);
     }
 
     const cardSnap = await db.collection("cards")
@@ -302,15 +300,12 @@ export const scoreResponse = onCall(
     if (!result) {
       if (!card) {
         // e.g. a fallback mock card that was never stored in Firestore.
-        result = {
-          score: 0,
-          message: "Card not found; response not scored",
-          usedClaude: false,
-        };
+        result = preChecked(0, "Card not found; response not scored");
       } else {
         try {
           result = await scoreWithClaude(
             String(card.body),
+            String(card.prompt ?? ""),
             input.responseText,
           );
         } catch (error) {
@@ -325,7 +320,7 @@ export const scoreResponse = onCall(
         }
       }
     }
-    const {score, message, usedClaude} = result;
+    const {score, message, usedClaude, reply, onTopic} = result;
     const interestId = card ? String(card.interestId) : null;
     const userId = request.auth.uid;
 
@@ -334,10 +329,7 @@ export const scoreResponse = onCall(
     const outcome = await db.runTransaction(async (tx) => {
       const current = await tx.get(interactionRef);
       if (current.get("scoredAt")) {
-        return {
-          score: Number(current.get("engagementScore")),
-          message: "Already scored",
-        };
+        return alreadyScored(current.data() ?? {});
       }
 
       const interestRef = interestId ?
@@ -352,14 +344,18 @@ export const scoreResponse = onCall(
         // Kept with the score as a record of why it was given.
         scoreReason: message,
         scoredBy: usedClaude ? "claude" : "precheck",
+        // Off-topic answers stay on record but count for nothing.
+        onTopic,
+        ...(reply ? {frankReply: reply} : {}),
       });
-      // Only interests the user chose have a weight to adjust.
-      if (interestRef && interestSnap?.exists) {
+      // Only interests the user chose have a weight to adjust, and an
+      // off-topic answer says nothing about the topic.
+      if (onTopic && interestRef && interestSnap?.exists) {
         const weight = Number(interestSnap.get("weight") ?? 1);
         const next = adjustWeight(weight, score);
         if (next !== weight) tx.update(interestRef, {weight: next});
       }
-      return {score, message};
+      return {score, message, reply, onTopic};
     });
 
     logger.info("Scored interaction", {
@@ -386,6 +382,24 @@ export const scoreResponse = onCall(
 );
 
 /**
+ * The stored result for an interaction that was already scored.
+ * @param {FirebaseFirestore.DocumentData} interaction The interaction data.
+ * @return {ScoreResponseResult} Its score, reply and on-topic flag.
+ */
+function alreadyScored(
+  interaction: FirebaseFirestore.DocumentData,
+): ScoreResponseResult {
+  return {
+    score: Number(interaction.engagementScore ?? 0),
+    message: "Already scored",
+    reply: typeof interaction.frankReply === "string" ?
+      interaction.frankReply :
+      undefined,
+    onTopic: interaction.onTopic !== false,
+  };
+}
+
+/**
  * Sets stats/{uid}.points to the sum of the user's answer scores, and
  * bestScore to the highest (for the Sharp take badge).
  * @param {string} userId The user whose scores to recount.
@@ -395,11 +409,11 @@ async function recountScores(userId: string): Promise<void> {
   const snapshot = await db.collection("interactions")
     .where("userId", "==", userId)
     .where("skipped", "==", false)
-    .select("engagementScore")
+    .select("engagementScore", "onTopic")
     .get();
-  const scores = snapshot.docs.map(
-    (doc) => Number(doc.get("engagementScore") ?? 0),
-  );
+  const scores = snapshot.docs
+    .filter((doc) => doc.get("onTopic") !== false)
+    .map((doc) => Number(doc.get("engagementScore") ?? 0));
   const points = scores.reduce((sum, score) => sum + score, 0);
   const bestScore = Math.max(0, ...scores);
   await db.collection("stats").doc(userId)
@@ -438,16 +452,18 @@ export const updateStats = onCall(
     const snapshot = await db.collection("interactions")
       .where("userId", "==", userId)
       .where("skipped", "==", false)
-      .select("createdAt")
+      .select("createdAt", "onTopic")
       .get();
+    // Off-topic answers don't count towards streaks or totals.
+    const answers = snapshot.docs.filter((doc) => doc.get("onTopic") !== false);
 
-    const days = snapshot.docs
+    const days = answers
       .map((doc) => doc.get("createdAt"))
       .filter((value): value is Timestamp => value instanceof Timestamp)
       .map((value) => localDayNumber(value.toDate(), tzOffsetMinutes));
     const today = localDayNumber(new Date(), tzOffsetMinutes);
     const {currentStreak, longestStreak} = computeStreaks(days, today);
-    const totalResponses = snapshot.size;
+    const totalResponses = answers.length;
 
     // Merged, so the points scoreResponse keeps are left alone.
     await db.collection("stats").doc(userId).set({

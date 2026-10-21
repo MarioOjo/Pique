@@ -76,6 +76,11 @@ interface ScoreResponseRequest {
 export interface ScoreResponseResult {
   score: number;
   message: string;
+  // Frank's reply to a written answer. Missing for choices and skips.
+  reply?: string;
+  // False when the answer didn't address the question. Defaults to true
+  // when an older deployed function leaves it out.
+  onTopic: boolean;
 }
 
 const scoreResponseCallable = httpsCallable<ScoreResponseRequest, ScoreResponseResult>(
@@ -86,7 +91,7 @@ const scoreResponseCallable = httpsCallable<ScoreResponseRequest, ScoreResponseR
 // Scores an interaction the app has already written to Firestore.
 export async function scoreResponse(interactionId: string): Promise<ScoreResponseResult> {
   const result = await scoreResponseCallable({ interactionId });
-  return result.data;
+  return { ...result.data, onTopic: result.data.onTopic !== false };
 }
 
 // Mirrors UpdateStatsRequest / UpdateStatsResult in functions/src.

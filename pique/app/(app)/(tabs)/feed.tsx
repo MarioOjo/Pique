@@ -37,6 +37,7 @@ export default function FeedScreen() {
     loadCards,
     submitResponse,
     skipCard,
+    answerInWriting,
     isLoading,
     isLoadingMore,
     error,
@@ -172,6 +173,7 @@ export default function FeedScreen() {
                 card={currentCard}
                 onSubmit={submitResponse}
                 onSkip={skipCard}
+                onWrite={answerInWriting}
                 cardNumber={currentIndex + 1}
                 totalCards={totalCards}
               />

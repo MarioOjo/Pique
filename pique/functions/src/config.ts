@@ -13,7 +13,7 @@ export const config = {
     // Leaves headroom so a full batch is never cut off mid-JSON.
     maxTokens: 4096,
     // Scoring returns a single {"score": n}.
-    scoringMaxTokens: 256,
+    scoringMaxTokens: 400,
   },
   cards: {
     batchSize: 5, // max cards generated per request
