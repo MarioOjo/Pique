@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.marioojo.pique",
       "adaptiveIcon": {
         "backgroundColor": "#1C1040",
         "foregroundImage": "./assets/android-icon-foreground.png",
