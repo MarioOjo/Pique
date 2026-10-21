@@ -10,6 +10,12 @@ import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
 import { MOCK_CARDS } from '@/lib/mockCards';
 import type { Card, UserInterest } from '@/types';
 
+// An answer given this session, for Frank's verdict at the end.
+export interface SessionAnswer {
+  interactionId: string;
+  card: Card;
+}
+
 interface UseCardsResult {
   currentCard: Card | null;
   sessionCards: Card[];
@@ -36,6 +42,8 @@ interface UseCardsResult {
   // Goes up by one each time the user answers several cards in a row too
   // quickly to have read them, so the feed can ask them to slow down.
   slowDownNudges: number;
+  // This session's answers (not skips), once each is saved.
+  sessionAnswers: SessionAnswer[];
 }
 
 const TOP_INTEREST_COUNT = 3;
@@ -158,6 +166,7 @@ export function useCards(): UseCardsResult {
   const indexRef = useRef(0);
   const quickAnswersInARow = useRef(0);
   const [slowDownNudges, setSlowDownNudges] = useState(0);
+  const [sessionAnswers, setSessionAnswers] = useState<SessionAnswer[]>([]);
 
   const loadCards = useCallback(async () => {
     const id = ++loadId.current;
@@ -167,6 +176,7 @@ export function useCards(): UseCardsResult {
     setPlannedSize(size);
     setError(null);
     setSessionCards([]);
+    setSessionAnswers([]);
     setUsingFallbackCards(false);
     setCurrentIndex(0);
     setEngagedCount(0);
@@ -217,6 +227,7 @@ export function useCards(): UseCardsResult {
   const recordAndAdvance = useCallback(
     async (responseText: string, timeOnCard: number, skipped: boolean) => {
       const index = indexRef.current;
+      const load = loadId.current;
       const card = sessionCards[index];
       if (!card) return;
 
@@ -247,6 +258,9 @@ export function useCards(): UseCardsResult {
           createdAt: serverTimestamp(),
         });
         interactionId = ref.id;
+        if (!skipped && load === loadId.current) {
+          setSessionAnswers((answers) => [...answers, { interactionId, card }]);
+        }
       } catch (e) {
         console.warn('Failed to record interaction', e);
         return;
@@ -303,5 +317,6 @@ export function useCards(): UseCardsResult {
     outOfCardsToday,
     moreCardsToday: remainingToday === null || remainingToday > 0,
     slowDownNudges,
+    sessionAnswers,
   };
 }

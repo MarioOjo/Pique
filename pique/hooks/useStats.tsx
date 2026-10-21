@@ -6,9 +6,16 @@ export interface StatsSummary {
   currentStreak: number;
   longestStreak: number;
   totalResponses: number;
+  // The sum of every answer's Frank score; sets the Thinker level.
+  points: number;
 }
 
-const EMPTY_STATS: StatsSummary = { currentStreak: 0, longestStreak: 0, totalResponses: 0 };
+const EMPTY_STATS: StatsSummary = {
+  currentStreak: 0,
+  longestStreak: 0,
+  totalResponses: 0,
+  points: 0,
+};
 
 function toNumber(value: unknown): number {
   return typeof value === 'number' ? value : 0;
@@ -32,6 +39,7 @@ export function useStats(userId: string | undefined): {
           currentStreak: toNumber(snapshot.get('currentStreak')),
           longestStreak: toNumber(snapshot.get('longestStreak')),
           totalResponses: toNumber(snapshot.get('totalResponses')),
+          points: toNumber(snapshot.get('points')),
         });
         setLoadedFor(userId);
       },

@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar } from '@/components/ui/Avatar';
+import { LevelProgress } from '@/components/ui/LevelProgress';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { makeStyles, useTheme } from '@/hooks/useTheme';
@@ -90,6 +91,17 @@ export default function ProfileScreen() {
           >
             <Text style={styles.statValue}>{statsLoading ? '–' : stats.totalResponses}</Text>
             <Text style={styles.statLabel}>cards completed</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Thinker level</Text>
+          <View style={styles.levelCard}>
+            {statsLoading ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <LevelProgress points={stats.points} />
+            )}
           </View>
         </View>
 
@@ -253,6 +265,11 @@ const useStyles = makeStyles((c) => ({
   },
   section: {
     gap: Theme.spacing.md,
+  },
+  levelCard: {
+    backgroundColor: c.surface,
+    borderRadius: Theme.borderRadius.md,
+    padding: Theme.spacing.md,
   },
   sectionLabel: {
     color: c.textSecondary,
