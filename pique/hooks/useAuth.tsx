@@ -46,6 +46,7 @@ function toPiqueUser(snapshot: DocumentSnapshot): PiqueUser | null {
     whyHere: isWhyHere(data.whyHere) ? data.whyHere : undefined,
     frankStyle: isFrankStyle(data.frankStyle) ? data.frankStyle : undefined,
     sessionSize: isSessionSize(data.sessionSize) ? data.sessionSize : undefined,
+    sessionsCompleted: typeof data.sessionsCompleted === 'number' ? data.sessionsCompleted : 0,
     dailyCardCount: data.dailyCardCount,
     createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
   };

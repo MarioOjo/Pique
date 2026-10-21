@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { InterestChip } from '@/components/ui/InterestChip';
@@ -14,9 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/lib/firebase';
 import { ONBOARDING_STEPS, STEP } from '@/lib/onboarding';
 import { INTERESTS, seedInterests } from '@/lib/seedInterests';
-import type { UserInterest } from '@/types';
-
-const MIN_SELECTED = 3;
+import { MIN_TOPICS, saveTopics } from '@/lib/topics';
 
 export default function OnboardingScreen() {
   const styles = useStyles();
@@ -61,27 +59,14 @@ export default function OnboardingScreen() {
   }, []);
 
   // Waits for saved topics to load so Continue never works from a stale list.
-  const canContinue = loadedSaved && selected.size >= MIN_SELECTED;
+  const canContinue = loadedSaved && selected.size >= MIN_TOPICS;
 
   const handleContinue = async () => {
     if (!canContinue || !user || submitting) return;
     setError(null);
     setSubmitting(true);
     try {
-      // Rules only allow creating a topic (at 1.0) or deleting it, so saved
-      // topics that are still picked are left alone.
-      const interests = collection(db, 'users', user.uid, 'interests');
-      const saved = new Set((await getDocs(interests)).docs.map((d) => d.id));
-      const batch = writeBatch(db);
-      selected.forEach((interestId) => {
-        if (saved.has(interestId)) return;
-        const interest: UserInterest = { interestId, weight: 1.0 };
-        batch.set(doc(interests, interestId), interest);
-      });
-      saved.forEach((interestId) => {
-        if (!selected.has(interestId)) batch.delete(doc(interests, interestId));
-      });
-      await batch.commit();
+      await saveTopics(user.uid, selected);
       // Onboarding carries on with the profile questions; the summary step
       // sets onboardingComplete.
       router.push('/onboarding-why');
@@ -121,7 +106,7 @@ export default function OnboardingScreen() {
           style={[styles.counter, canContinue && styles.counterMet]}
           accessibilityLiveRegion="polite"
         >
-          {selected.size} of {MIN_SELECTED} minimum selected
+          {selected.size} of {MIN_TOPICS} minimum selected
         </Text>
 
         <ErrorMessage message={error} />

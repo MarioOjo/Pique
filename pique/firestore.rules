@@ -63,13 +63,17 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['name', 'onboardingComplete', 'frankIntroSeen',
                        'avatarId', 'ageBand', 'whyHere', 'frankStyle',
-                       'sessionSize'])
+                       'sessionSize', 'sessionsCompleted'])
         && (!changed('name') || validName(request.resource.data.name))
         && (!changed('avatarId') || validAvatarId(request.resource.data.avatarId))
         && (!changed('ageBand') || validAgeBand(request.resource.data.ageBand))
         && (!changed('whyHere') || validWhyHere(request.resource.data.whyHere))
         && (!changed('frankStyle') || validFrankStyle(request.resource.data.frankStyle))
-        && (!changed('sessionSize') || validSessionSize(request.resource.data.sessionSize));
+        && (!changed('sessionSize') || validSessionSize(request.resource.data.sessionSize))
+        // Finished sessions only ever go up, one at a time.
+        && (!changed('sessionsCompleted')
+            || request.resource.data.sessionsCompleted
+               == resource.data.get('sessionsCompleted', 0) + 1);
       allow delete: if false;
 
       // Picked during onboarding at weight 1.0. After that, weights are
@@ -77,13 +81,22 @@ service cloud.firestore {
       // tune their own feed weights directly.
       match /interests/{interestId} {
         allow read: if isOwner(uid);
-        allow create: if isOwner(uid)
+        allow create: if isOwner(uid) && canChangeTopics(uid)
           && request.resource.data.keys().hasOnly(['interestId', 'weight'])
           && request.resource.data.interestId == interestId
           && request.resource.data.weight == 1.0;
         allow update: if false;
-        allow delete: if isOwner(uid);
+        allow delete: if isOwner(uid) && canChangeTopics(uid);
       }
+    }
+
+    // Topics are picked during onboarding, and can be changed again only
+    // after 10 finished sessions, once Frank has learned something.
+    // Keep in sync with SESSIONS_TO_CHANGE_TOPICS in lib/topics.ts.
+    function canChangeTopics(uid) {
+      let profile = get(/databases/$(database)/documents/users/$(uid)).data;
+      return profile.get('onboardingComplete', false) == false
+        || profile.get('sessionsCompleted', 0) >= 10;
     }
 
     // Seeded by the app on first onboarding. Clients may only create the
