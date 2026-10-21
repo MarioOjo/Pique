@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FirebaseError } from 'firebase/app';
-import { addDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  increment,
+  serverTimestamp,
+  updateDoc,
+} from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { minReadingTimeMs } from '@/lib/answerCheck';
 import { generateCards, scoreResponse, updateStats } from '@/lib/claude';
@@ -383,6 +391,20 @@ export function useCards(): UseCardsResult {
   );
 
 
+  // Counts each finished session once, if anything was answered. Rules
+  // only let the count go up by one at a time.
+  const countedLoad = useRef(0);
+  const isSessionComplete =
+    !isLoadingMore && sessionCards.length > 0 && currentIndex >= sessionCards.length;
+  useEffect(() => {
+    if (!isSessionComplete || !user || engagedCount === 0) return;
+    if (countedLoad.current === loadId.current) return;
+    countedLoad.current = loadId.current;
+    updateDoc(doc(db, 'users', user.uid), { sessionsCompleted: increment(1) }).catch(
+      (e: unknown) => console.warn('Failed to count session', e),
+    );
+  }, [isSessionComplete, user, engagedCount]);
+
   // While cards are still arriving, count the whole planned session so the
   // progress bar doesn't jump.
   const totalCards = isLoadingMore
@@ -395,7 +417,7 @@ export function useCards(): UseCardsResult {
     currentIndex,
     totalCards,
     engagedCount,
-    isSessionComplete: !isLoadingMore && totalCards > 0 && currentIndex >= totalCards,
+    isSessionComplete,
     loadCards,
     submitResponse,
     skipCard,

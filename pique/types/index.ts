@@ -77,6 +77,8 @@ export interface User {
   whyHere?: WhyHere;
   frankStyle?: FrankStyle;
   sessionSize?: SessionSize;
+  // Sessions finished with at least one answer. Unlocks changing topics.
+  sessionsCompleted: number;
   dailyCardCount: number;
   createdAt: Date;
 }

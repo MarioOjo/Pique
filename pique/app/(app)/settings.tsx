@@ -29,6 +29,7 @@ import { useStats } from '@/hooks/useStats';
 import { useTopInterests } from '@/hooks/useTopInterests';
 import { AVATAR_PRESETS } from '@/lib/avatars';
 import { DEFAULT_SESSION_SIZE } from '@/lib/onboarding';
+import { SESSIONS_TO_CHANGE_TOPICS } from '@/lib/topics';
 import { deleteAccount } from '@/lib/claude';
 import { db } from '@/lib/firebase';
 
@@ -65,6 +66,8 @@ export default function SettingsScreen() {
 
   const name = piqueUser?.name?.trim() || 'Pique user';
   const email = piqueUser?.email ?? user?.email ?? '';
+  const sessionsCompleted = piqueUser?.sessionsCompleted ?? 0;
+  const topicsUnlocked = sessionsCompleted >= SESSIONS_TO_CHANGE_TOPICS;
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
@@ -317,12 +320,36 @@ export default function SettingsScreen() {
           {/* FEED */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>FEED</Text>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Topics following</Text>
-              <Text style={[styles.rowValue, styles.rowValueMuted]}>
-                {interestsLoading ? '–' : interests.length}
-              </Text>
-            </View>
+            {topicsUnlocked ? (
+              <Pressable
+                style={styles.row}
+                onPress={() => router.push('/edit-topics')}
+                accessibilityRole="button"
+                accessibilityLabel={`Topics following, ${interests.length}. Change topics`}
+              >
+                <Text style={styles.rowLabel}>Topics following</Text>
+                <View style={styles.rowValueGroup}>
+                  <Text style={[styles.rowValue, styles.rowValueMuted]}>
+                    {interestsLoading ? '–' : interests.length}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+                </View>
+              </Pressable>
+            ) : (
+              <View style={styles.row}>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowLabel}>Topics following</Text>
+                  {/* Topics stay put until Frank has had time to learn. */}
+                  <Text style={styles.rowSubtitle}>
+                    🔒 Change them after {SESSIONS_TO_CHANGE_TOPICS} sessions ·{' '}
+                    {sessionsCompleted} done
+                  </Text>
+                </View>
+                <Text style={[styles.rowValue, styles.rowValueMuted]}>
+                  {interestsLoading ? '–' : interests.length}
+                </Text>
+              </View>
+            )}
             <View style={styles.divider} />
             <View style={styles.row}>
               <Text style={styles.rowLabel}>Cards per session</Text>
