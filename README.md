@@ -39,7 +39,7 @@ Frank is built on Anthropic's Claude. He isn't trying to keep you on the app as 
 - **Privacy notice.** The register screen says what's stored and that answers are sent to Claude, and that Pique is for adults (18+).
 - **Account created.** A short confirmation after sign-up, before the intro.
 - **Meet Frank.** A two-page intro: how Pique works, then who Frank is.
-- **Onboarding questions.** Age band, at least three of twelve topics, why you're here, how hard Frank should push back, and how long a session should be. The last three can be skipped. A summary shows how Frank will work with you.
+- **Onboarding questions.** Age band, at least three of thirteen topics, why you're here, how hard Frank should push back, and how long a session should be. The last three can be skipped. A summary shows how Frank will work with you.
 
 **Sessions and cards**
 
@@ -280,7 +280,7 @@ pique/
 │   ├── firebase.ts               # Firebase app, auth (persisted), Firestore, Functions, emulators
 │   ├── claude.ts                 # Typed wrappers for the Cloud Functions
 │   ├── onboarding.ts             # Onboarding options, steps and routes
-│   ├── seedInterests.ts          # The twelve topics
+│   ├── seedInterests.ts          # The thirteen topics
 │   ├── avatars.ts                # The eight preset avatars
 │   ├── mockCards.ts              # Sample cards, used only as a fallback
 │   └── authErrors.ts             # Friendly messages for Firebase auth errors
@@ -310,7 +310,7 @@ All of Frank's work happens in Firebase Cloud Functions. The app calls them as c
 
 **Input:** `{ userId, interestId, count }`, where `count` is 1–5.
 
-1. **Validates the request.** `interestId` must be one of the twelve topics and `count` must be within the batch size.
+1. **Validates the request.** `interestId` must be one of the thirteen topics and `count` must be within the batch size.
 2. **Reserves daily quota in a transaction.** Each user can generate up to 30 cards per day, so concurrent calls can't exceed the limit. The counter resets each UTC day. The same transaction reads the user's onboarding answers.
 3. **Personalises Frank's prompt.** The age band, why the user is here and how hard Frank should push back each add one line to an "About this user" block, and the push-back level nudges card difficulty. Every line comes from a fixed table on the server (`toUserProfile`), never from the user's stored text, so an answer can't inject instructions; unknown values are dropped.
 4. **Calls Claude** (`claude-sonnet-4-5`) with Frank's system prompt and **structured outputs.** A Zod schema forces the reply into an exact JSON shape: `type`, `body`, `prompt`, `counterpoint` (perspective cards only) and `difficulty` (1–5). The SDK then checks the result against the schema.
@@ -390,7 +390,7 @@ erDiagram
 | --- | --- | --- |
 | `users/{uid}` | `name`, `email`, `role` (`standard` / `admin`), `avatarId?`, `frankIntroSeen`, `onboardingComplete`, `ageBand?`, `whyHere?`, `frankStyle?` (1–5), `sessionSize?` (5 / 10 / 15), `dailyCardCount`, `dailyCardCountDate`, `createdAt` | App on sign-up and during onboarding; functions maintain the daily counter |
 | `users/{uid}/interests/{interestId}` | `interestId`, `weight` (0.1–3.0) | App during onboarding (at 1.0); `scoreResponse` afterwards |
-| `interests/{interestId}` | `id`, `name`, `emoji`, `createdAt` | Seeded once, from a fixed list of twelve |
+| `interests/{interestId}` | `id`, `name`, `emoji`, `createdAt` | Seeded once, from a fixed list of thirteen |
 | `cards/{cardId}` | `interestId`, `type` (`perspective` / `recall`), `body`, `prompt`, `counterpoint?`, `difficulty`, `status`, `createdAt`, `expiresAt` | `generateCards` only |
 | `interactions/{id}` | `userId`, `cardId`, `responseText`, `timeOnCard` (ms), `skipped`, `engagementScore`, `scoredAt`, `scoreReason`, `scoredBy` (`claude` / `precheck`), `createdAt` | App creates it; `scoreResponse` adds the score and the reason for it |
 | `stats/{uid}` | `currentStreak`, `longestStreak`, `totalResponses`, `lastActive` | `updateStats` only |
@@ -409,7 +409,7 @@ Firestore Security Rules (`pique/firestore.rules`) treat the app as untrusted. C
 - **Cards are written only by Cloud Functions.** Signed-in users can read cards, but nobody can create, edit or delete one from the app.
 - **Interactions are write-once.** A user can create an interaction only for themselves, in exactly the expected shape and with `engagementScore` set to 0, so nobody can score themselves. Interactions can't be edited or deleted afterwards, and users can only read their own.
 - **Stats are server-only.** Users can read their own `stats/{uid}` document, but only `updateStats` can write it.
-- **The topic list is fixed.** The twelve interest documents can be created once, with a fixed list of IDs and fields, and never changed.
+- **The topic list is fixed.** The thirteen interest documents can be created once, with a fixed list of IDs and fields, and never changed.
 - **The AI key stays on the server.** The Claude API key is a Firebase secret, available only to the functions that need it, and never shipped in the app.
 - **Users can delete their data.** Delete account removes everything stored about the user (see `deleteAccount` above), and the privacy notice on register and in Settings says what's kept and that written answers go to Claude.
 

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useFreshCardsCountdown } from '@/components/feed/DoneForToday';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 
 interface SessionCompleteProps {
   cardsCompleted: number;
@@ -32,6 +33,7 @@ export function SessionComplete({
   onStartNewSession,
   onViewProfile,
 }: SessionCompleteProps) {
+  const styles = useStyles();
   const [frankMessage] = useState(
     () => FRANK_MESSAGES[Math.floor(Math.random() * FRANK_MESSAGES.length)],
   );
@@ -96,7 +98,8 @@ export function SessionComplete({
 
 const MIN_TOUCH_TARGET = 44;
 
-const styles = StyleSheet.create({
+// Always dark, so the colours are fixed; only the text size follows the theme.
+const useStyles = makeStyles(() => ({
   root: {
     flex: 1,
     backgroundColor: Colors.navy,
@@ -187,4 +190,4 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
-});
+}));

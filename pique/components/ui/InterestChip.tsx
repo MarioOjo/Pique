@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text } from 'react-native';
+import { Animated, Pressable, Text } from 'react-native';
 import { Theme } from '@/constants/theme';
-import { useTheme } from '@/hooks/useTheme';
+import { makeStyles, useTheme } from '@/hooks/useTheme';
 import type { Interest } from '@/types';
 
 interface InterestChipProps {
@@ -13,6 +13,7 @@ interface InterestChipProps {
 const TRANSITION_MS = 180;
 
 export function InterestChip({ interest, selected, onToggle }: InterestChipProps) {
+  const styles = useStyles();
   const { colors } = useTheme();
   const [progress] = useState(() => new Animated.Value(selected ? 1 : 0));
 
@@ -62,7 +63,8 @@ export function InterestChip({ interest, selected, onToggle }: InterestChipProps
   );
 }
 
-const styles = StyleSheet.create({
+// Colours are set inline above; the theme only sets the text size.
+const useStyles = makeStyles(() => ({
   pressable: {
     width: '48%',
   },
@@ -86,4 +88,4 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
-});
+}));

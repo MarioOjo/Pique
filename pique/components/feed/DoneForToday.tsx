@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
+import { makeStyles } from '@/hooks/useTheme';
 
 const TICK_MS = 30_000;
 
@@ -48,6 +49,7 @@ interface DoneForTodayProps {
 // Shown when today's cards are used up. A deliberate stop: Pique is a few
 // sessions a day, not an endless feed.
 export function DoneForToday({ onCheckAgain, onViewProfile }: DoneForTodayProps) {
+  const styles = useStyles();
   const wait = useFreshCardsCountdown();
 
   return (
@@ -94,7 +96,8 @@ export function DoneForToday({ onCheckAgain, onViewProfile }: DoneForTodayProps)
 
 const MIN_TOUCH_TARGET = 44;
 
-const styles = StyleSheet.create({
+// Always dark, so the colours are fixed; only the text size follows the theme.
+const useStyles = makeStyles(() => ({
   root: {
     flex: 1,
     backgroundColor: Colors.navy,
@@ -176,4 +179,4 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fontFamily.semiBold,
     fontSize: Theme.fontSize.md,
   },
-});
+}));
