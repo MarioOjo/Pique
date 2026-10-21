@@ -373,9 +373,9 @@ export const scoreResponse = onCall(
     // scored before points existed. A failure here doesn't undo the score.
     if (!input.skipped) {
       try {
-        await recountPoints(userId);
+        await recountScores(userId);
       } catch (error) {
-        logger.error("Points recount failed", {
+        logger.error("Score recount failed", {
           userId,
           error: describeError(error),
         });
@@ -386,22 +386,24 @@ export const scoreResponse = onCall(
 );
 
 /**
- * Sets stats/{uid}.points to the sum of the user's answer scores.
- * @param {string} userId The user whose points to recount.
- * @return {Promise<number>} The new points total.
+ * Sets stats/{uid}.points to the sum of the user's answer scores, and
+ * bestScore to the highest (for the Sharp take badge).
+ * @param {string} userId The user whose scores to recount.
+ * @return {Promise<void>} Resolves once stats are written.
  */
-async function recountPoints(userId: string): Promise<number> {
+async function recountScores(userId: string): Promise<void> {
   const snapshot = await db.collection("interactions")
     .where("userId", "==", userId)
     .where("skipped", "==", false)
     .select("engagementScore")
     .get();
-  const points = snapshot.docs.reduce(
-    (sum, doc) => sum + Number(doc.get("engagementScore") ?? 0),
-    0,
+  const scores = snapshot.docs.map(
+    (doc) => Number(doc.get("engagementScore") ?? 0),
   );
-  await db.collection("stats").doc(userId).set({points}, {merge: true});
-  return points;
+  const points = scores.reduce((sum, score) => sum + score, 0);
+  const bestScore = Math.max(0, ...scores);
+  await db.collection("stats").doc(userId)
+    .set({points, bestScore}, {merge: true});
 }
 
 /**

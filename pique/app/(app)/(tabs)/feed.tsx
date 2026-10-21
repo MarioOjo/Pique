@@ -134,7 +134,6 @@ export default function FeedScreen() {
           topicsExplored={new Set(sessionCards.map((card) => card.interestId)).size}
           bestStreak={stats.longestStreak}
           answers={sessionAnswers}
-          points={stats.points}
           moreToday={moreCardsToday}
           onStartNewSession={loadCards}
           onViewProfile={() => router.navigate('/profile')}

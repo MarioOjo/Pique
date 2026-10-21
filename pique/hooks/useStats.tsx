@@ -8,6 +8,8 @@ export interface StatsSummary {
   totalResponses: number;
   // The sum of every answer's Frank score; sets the Thinker level.
   points: number;
+  // The highest score any answer has earned.
+  bestScore: number;
 }
 
 const EMPTY_STATS: StatsSummary = {
@@ -15,6 +17,7 @@ const EMPTY_STATS: StatsSummary = {
   longestStreak: 0,
   totalResponses: 0,
   points: 0,
+  bestScore: 0,
 };
 
 function toNumber(value: unknown): number {
@@ -40,6 +43,7 @@ export function useStats(userId: string | undefined): {
           longestStreak: toNumber(snapshot.get('longestStreak')),
           totalResponses: toNumber(snapshot.get('totalResponses')),
           points: toNumber(snapshot.get('points')),
+          bestScore: toNumber(snapshot.get('bestScore')),
         });
         setLoadedFor(userId);
       },

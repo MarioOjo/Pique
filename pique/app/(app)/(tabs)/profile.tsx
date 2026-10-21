@@ -3,11 +3,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar } from '@/components/ui/Avatar';
+import { BadgeGrid } from '@/components/ui/BadgeGrid';
 import { LevelProgress } from '@/components/ui/LevelProgress';
 import { Colors } from '@/constants/colors';
 import { Theme } from '@/constants/theme';
 import { makeStyles, useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useBadges } from '@/hooks/useBadges';
 import { useStats } from '@/hooks/useStats';
 import { useRecentTakes, type RecentTake } from '@/hooks/useRecentTakes';
 import { useTopInterests } from '@/hooks/useTopInterests';
@@ -31,6 +33,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, piqueUser } = useAuth();
   const { stats, loading: statsLoading } = useStats(user?.uid);
+  const { badges } = useBadges(user?.uid, stats, statsLoading);
   const { interests, loading: interestsLoading } = useTopInterests(user?.uid, TOP_TOPIC_COUNT);
   const { takes, loading: takesLoading } = useRecentTakes(user?.uid);
   // Bars and percentages are relative to the strongest topic.
@@ -103,6 +106,11 @@ export default function ProfileScreen() {
               <LevelProgress points={stats.points} />
             )}
           </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Badges</Text>
+          {statsLoading ? <ActivityIndicator color={colors.accent} /> : <BadgeGrid badges={badges} />}
         </View>
 
         <View style={styles.section}>
