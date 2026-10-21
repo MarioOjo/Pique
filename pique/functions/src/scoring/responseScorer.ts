@@ -153,9 +153,11 @@ export async function scoreWithClaude(
   cardPrompt: string,
   responseText: string,
 ): Promise<ScoreResult> {
-  const response = await getAnthropicClient().messages.parse({
+  const response = await getAnthropicClient().beta.messages.parse({
     model: config.anthropic.model,
     max_tokens: config.anthropic.scoringMaxTokens,
+    betas: [config.anthropic.fallbackBeta],
+    fallbacks: "default",
     system: SYSTEM_PROMPT,
     messages: [
       {
@@ -171,7 +173,10 @@ ${responseText.trim()}
 Score this response.`,
       },
     ],
-    output_config: {format: zodOutputFormat(ScoreSchema)},
+    output_config: {
+      effort: config.anthropic.effort,
+      format: zodOutputFormat(ScoreSchema),
+    },
   });
 
   if (response.stop_reason === "refusal") {
