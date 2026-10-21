@@ -445,11 +445,11 @@ export default function SettingsScreen() {
             <View style={styles.privacy}>
               <Text style={styles.privacyText}>
                 Pique stores your name, email, age band, onboarding answers, topics, and each
-                response with its score, in Google Firebase.
+                response with its score and Frank’s reply, in Google Firebase.
               </Text>
               <Text style={styles.privacyText}>
-                Your written answers are sent to Claude, Anthropic’s AI, to score them, and
-                Claude writes your cards from the topics and answers you chose.
+                Your written answers are sent to Claude, Anthropic’s AI, to score and reply to
+                them, and Claude writes your cards from the topics and answers you chose.
               </Text>
               <Text style={styles.privacyText}>
                 Delete account (above) permanently removes all of it.

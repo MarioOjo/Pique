@@ -38,6 +38,9 @@ export default function ProfileScreen() {
   const { takes, loading: takesLoading } = useRecentTakes(user?.uid);
   // Bars and percentages are relative to the strongest topic.
   const topWeight = interests[0]?.weight ?? 1;
+  // Every topic starts at the same weight, so until scoring separates them
+  // there's no real order to show.
+  const ranked = interests.some((interest) => interest.weight !== topWeight);
 
   const name = piqueUser?.name?.trim() || 'Pique user';
   const email = piqueUser?.email ?? user?.email ?? '';
@@ -120,31 +123,36 @@ export default function ProfileScreen() {
           ) : interests.length === 0 ? (
             <Text style={styles.empty}>Your top topics will show here once you answer a few cards.</Text>
           ) : (
-            interests.map((interest, index) => {
-              const rank = index + 1;
-              const percent = Math.round(Math.min(100, (interest.weight / topWeight) * 100));
-              const strength = rank === 1 ? 'Strongest' : `${percent}%`;
-              const name = interestName(interest.interestId);
-              return (
-                <View
-                  key={interest.interestId}
-                  style={styles.topic}
-                  accessibilityLabel={`Number ${rank}, ${name}, ${strength}`}
-                >
-                  <View style={styles.topicHeader}>
-                    <Text style={styles.topicRank}>{rank}</Text>
-                    <Text style={styles.topicName} numberOfLines={1}>
-                      {name}
-                    </Text>
-                    <Text style={styles.topicStrength}>{strength}</Text>
+            <>
+              {!ranked && (
+                <Text style={styles.empty}>Frank will rank these as you answer cards.</Text>
+              )}
+              {interests.map((interest, index) => {
+                const rank = index + 1;
+                const percent = Math.round(Math.min(100, (interest.weight / topWeight) * 100));
+                const strength = !ranked ? '' : rank === 1 ? 'Strongest' : `${percent}%`;
+                const name = interestName(interest.interestId);
+                return (
+                  <View
+                    key={interest.interestId}
+                    style={styles.topic}
+                    accessibilityLabel={ranked ? `Number ${rank}, ${name}, ${strength}` : name}
+                  >
+                    <View style={styles.topicHeader}>
+                      <Text style={styles.topicRank}>{rank}</Text>
+                      <Text style={styles.topicName} numberOfLines={1}>
+                        {name}
+                      </Text>
+                      <Text style={styles.topicStrength}>{strength}</Text>
+                    </View>
+                    <View style={styles.barTrack}>
+                      {/* Width depends on data, so it can't live in the StyleSheet. */}
+                      <View style={[styles.barFill, { width: `${percent}%` }]} />
+                    </View>
                   </View>
-                  <View style={styles.barTrack}>
-                    {/* Width depends on data, so it can't live in the StyleSheet. */}
-                    <View style={[styles.barFill, { width: `${percent}%` }]} />
-                  </View>
-                </View>
-              );
-            })
+                );
+              })}
+            </>
           )}
         </View>
 

@@ -61,6 +61,9 @@ export const SESSION_SIZES = [
 ] as const;
 export type SessionSize = (typeof SESSION_SIZES)[number]['count'];
 export const DEFAULT_SESSION_SIZE: SessionSize = 10;
+// Generated cards a user can get per day. Mirrors cards.dailyLimit in
+// functions/src/config.ts.
+export const DAILY_CARD_LIMIT = 30;
 
 // Every screen between the Frank intro and the feed, in order. The root
 // layout leaves users on any of these until onboardingComplete is set.
