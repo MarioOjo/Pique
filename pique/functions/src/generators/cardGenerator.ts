@@ -139,12 +139,18 @@ Rules for every card you generate:
   about the reading level of a 14-year-old. The ideas can be deep; the
   words should be simple
 - No jargon. If a term is needed, explain it in a few plain words
-- For perspective cards: present a clear position worth debating
+- For perspective cards: the body states one clear position worth
+  debating, and the reader can only answer Agree or Disagree. So the
+  prompt must be a yes/no question asking whether they agree with that
+  one position, such as "Do you agree that chess should count as a
+  sport?" Never an either/or question ("Is it X, or Y?"), and never an
+  open question ("Why...?", "What...?") on a perspective card
 - For recall cards: explain an idea simply, then ask for reflection
 - Difficulty 1 = anyone can engage, 5 = requires real thought
 - Keep the body short so the reader reaches the question fresh: 140
   characters or fewer, at most two short sentences
-- The prompt is a direct question to the reader, in plain words
+- The prompt is a direct question to the reader, in plain words. On a
+  recall card it is open, asking them to explain or reflect in writing
 - The prompt (the sub-prompt) must be 80 characters or fewer
 - The counterpoint is one or two short sentences, just as plain
 - Never generate harmful, biased or inappropriate content`;
