@@ -35,6 +35,13 @@
       ],
       "expo-status-bar"
     ],
-    "scheme": "pique"
+    "scheme": "pique",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "30385279-0b1a-4ea0-8750-d1efce08d3e7"
+      }
+    },
+    "owner": "marioojo"
   }
 }

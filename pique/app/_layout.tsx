@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { LogBox } from 'react-native';
 import { Stack, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -14,6 +15,10 @@ import { ThemeProvider, useTheme } from '@/hooks/useTheme';
 import { ONBOARDING_ROUTES } from '@/lib/onboarding';
 
 SplashScreen.preventAutoHideAsync();
+
+// Warnings and errors still print in the Metro terminal, but not as toasts
+// on the phone during demos. Release builds never show them.
+if (__DEV__) LogBox.ignoreAllLogs();
 
 function RootNavigator() {
   const { user, piqueUser, loading } = useAuth();

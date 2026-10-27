@@ -4,11 +4,15 @@
   },
   "build": {
     "preview": {
+      "environment": "preview",
+      "node": "24.12.0",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
     },
-    "production": {}
+    "production": {
+      "node": "24.12.0"
+    }
   }
 }
