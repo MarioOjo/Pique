@@ -12,6 +12,14 @@ Pique is a mobile app that replaces mindless scrolling with short, AI-generated 
 
 Pique was built by Mario Ojo (241334) for Interactive Development 300 (DV300), Theme 4, at Open Window Institute.
 
+## Try it on Android
+
+1. On an Android phone, open the [Pique APK download page](https://expo.dev/accounts/marioojo/projects/pique/builds/8a50d3cf-ef2e-4548-adb0-2c6cc8093a93) and tap **Install**.
+2. If Android asks, allow your browser to install unknown apps. If Play Protect warns that the app is unrecognised, tap **Install anyway**. This happens because Pique isn't on the Play Store.
+3. Open Pique, register with any email and password, and follow the short onboarding.
+
+The APK connects to the live Firebase project, so it needs an internet connection. To run Pique from source instead, see [Getting started](#getting-started).
+
 ---
 
 ## The problem
@@ -126,7 +134,7 @@ In dark mode, screens switch to deep navy (`#110B26` backgrounds, `#1D1540` card
 
 ### Prerequisites
 
-- **Node.js 22 or later.** The Cloud Functions target Node.js 24, so use 24 to match production. Node 22 works locally, but the emulator will print a version warning.
+- **Node.js 24.12 or later (with npm 11).** This matches the Cloud Functions runtime and the cloud builds. The lockfile was made with npm 11, and `npm ci` on npm 10 rejects it.
 - **Java 21 or later.** Needed by the Firestore emulator.
 - **The Expo Go app** on your phone, or an Android emulator or iOS simulator. You don't need a global Expo CLI install, because `npx expo` uses the project's own copy.
 - **A Firebase project.** Production deploys need the Blaze (pay-as-you-go) plan. Local development with emulators doesn't.
@@ -249,6 +257,19 @@ npx firebase-tools deploy --only functions,firestore
 
 Deploying runs the functions' lint and build steps first. The rules in `firestore.rules` must be deployed for the protections described under [Security](#security) to apply, and `firestore.indexes.json` holds the index the profile's Recent takes query needs. A brand-new function can take a minute or two after its first deploy before the app is allowed to call it.
 
+### Building the APK
+
+The installable Android app is built in the cloud with [EAS Build](https://docs.expo.dev/build/introduction/), using the `preview` profile in `eas.json`. That profile produces an APK, runs on Node 24.12 and reads the environment named "preview".
+
+`.env` is git-ignored, so EAS never receives it. Add the six `EXPO_PUBLIC_FIREBASE_*` values to the EAS "preview" environment once (on expo.dev, or with `npx eas-cli@latest env:create`). Then build:
+
+```bash
+cd pique
+npx eas-cli@latest build --profile preview --platform android
+```
+
+The build takes about 15–20 minutes and ends with a download link and QR code. Release builds always use the live Firebase project, never the emulators.
+
 ---
 
 ## Project structure
@@ -317,6 +338,7 @@ pique/
 ├── firestore.rules               # Security Rules
 ├── firestore.indexes.json        # Composite index for Recent takes
 ├── firebase.json                 # Functions, rules, indexes and emulator configuration
+├── eas.json                      # EAS Build profiles (preview APK)
 └── .env                          # Firebase web config (git-ignored)
 ```
 
