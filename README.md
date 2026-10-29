@@ -12,11 +12,12 @@ Pique is a mobile app that replaces mindless scrolling with short, AI-generated 
 
 Pique was built by Mario Ojo (241334) for Interactive Development 300 (DV300), Theme 4, at Open Window Institute.
 
-## Demo video
+## Videos
 
 [![Watch the Pique demo on YouTube](https://img.youtube.com/vi/7gklEGbBxdA/hqdefault.jpg)](https://youtu.be/7gklEGbBxdA)
 
-[Watch the demo on YouTube](https://youtu.be/7gklEGbBxdA): a walkthrough of Pique on an Android phone.
+- **Demo:** [watch on YouTube](https://youtu.be/7gklEGbBxdA), a walkthrough of Pique on an Android phone.
+- **Presentation:** [watch on Google Drive](https://drive.google.com/file/d/18349UP7uI3AfYI2YUGhCgkffcHkWAtDV/view?usp=sharing), the project presentation.
 
 ## Try it on Android
 
