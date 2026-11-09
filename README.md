@@ -21,9 +21,14 @@ Pique was built by Mario Ojo (241334) for Interactive Development 300 (DV300), T
 
 ## Try it on Android
 
-1. On an Android phone, open the [Pique APK download page](https://expo.dev/accounts/marioojo/projects/pique/builds/8a50d3cf-ef2e-4548-adb0-2c6cc8093a93) and tap **Install**.
-2. If Android asks, allow your browser to install unknown apps. If Play Protect warns that the app is unrecognised, tap **Install anyway**. This happens because Pique isn't on the Play Store.
-3. Open Pique, register with any email and password, and follow the short onboarding.
+1. On an Android phone, [download pique.apk](https://github.com/MarioOjo/Pique/releases/latest/download/pique.apk), or scan this QR code with the phone's camera:
+
+   <img src="docs/pique-apk-qr.png" alt="QR code that downloads pique.apk" width="160">
+
+2. Open the downloaded file. If Android asks, allow your browser to install unknown apps. If Play Protect warns that the app is unrecognised, tap **Install anyway**. This happens because Pique isn't on the Play Store.
+3. Open Pique, register with any email and password or tap **Continue with Google**, and follow the short onboarding.
+
+Every version is listed on the [Releases page](https://github.com/MarioOjo/Pique/releases).
 
 The APK connects to the live Firebase project, so it needs an internet connection. To run Pique from source instead, see [Getting started](#getting-started).
 
@@ -51,6 +56,7 @@ Frank is built on Anthropic's Claude. He isn't trying to keep you on the app as 
 
 - **Animated splash.** On first launch, a large "P" scans the letters of "ique" like a magnifying glass, settles into the logo and the tagline "Think before you scroll." fades in. Later launches show just the finished logo. Tap to skip; reduced motion and screen readers get the still version.
 - **Email and password accounts.** Sign up, sign in and stay signed in between sessions, with a show/hide toggle on password fields and a password reset by email.
+- **Continue with Google (Android).** One tap on the login or register screen. A first Google sign-in creates the Pique profile from the Google account's name and goes through the intro and onboarding like any new account. It needs a development or release build, so it's hidden in Expo Go.
 - **Privacy notice.** The register screen says what's stored and that answers are sent to Claude, and that Pique is for adults (18+).
 - **Account created.** A short confirmation after sign-up, before the intro.
 - **Meet Frank.** A two-page intro: how Pique works, then who Frank is.
@@ -113,7 +119,7 @@ These are designed or partly built, but not finished:
 | Mobile app | React Native 0.86 + Expo SDK 57 | One TypeScript codebase for iOS and Android, with Expo Go for fast on-device testing |
 | Language | TypeScript (strict) | Shared, checked types between screens, hooks and Cloud Functions |
 | Navigation | expo-router | File-based routes: separate auth and app groups, with a stack around the Feed and Profile tabs |
-| Authentication | Firebase Authentication | Email and password sign-in, kept between sessions with AsyncStorage |
+| Authentication | Firebase Authentication + `@react-native-google-signin/google-signin` | Email/password and Google sign-in, kept between sessions with AsyncStorage |
 | Database | Cloud Firestore | Real-time listeners keep stats and topic weights live, and Security Rules protect each user's data |
 | Server logic | Firebase Cloud Functions (Node.js 24) | Keeps the Claude API key off the device and runs scoring and stats on the server |
 | AI | Claude API (`claude-opus-5-5`) via `@anthropic-ai/sdk` | Writes cards, scores and replies to responses, with structured outputs that return checked JSON |
@@ -175,6 +181,8 @@ The app's `EXPO_PUBLIC_FIREBASE_PROJECT_ID` must match this project, or the app 
 
 In the console, go to **Authentication → Sign-in method** and enable **Email/Password**.
 
+For Google sign-in (optional, Android only), also enable **Google**, then copy its **Web client ID** (under *Web SDK configuration*) into `.env` as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. In **Project settings → Your apps**, add an Android app with the package name `com.marioojo.pique`, add your EAS signing key's SHA-1 fingerprint to it (shown by `npx eas-cli@latest credentials -p android`), and download its `google-services.json` into `pique/`, replacing the committed one if you're using your own project. Google sign-in only runs in a [development build](#development-build), not Expo Go.
+
 **4. Add your Anthropic API key for local development.**
 
 Create `pique/functions/.secret.local`:
@@ -202,6 +210,7 @@ Expo variables live in `pique/.env`, which is git-ignored. The `EXPO_PUBLIC_` pr
 | `EXPO_PUBLIC_FIREBASE_APP_ID` | The web app ID (`1:…:web:…`) |
 | `EXPO_PUBLIC_USE_EMULATORS` | Optional. Set to `false` to make development builds use the real Firebase project instead of the local emulators. |
 | `EXPO_PUBLIC_ALWAYS_PLAY_INTRO` | Optional, development only. Set to `true` to play the full splash animation on every launch instead of only the first. |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Optional. The Google provider's Web client ID (`…apps.googleusercontent.com`). Without it, the "Continue with Google" button is hidden. |
 
 > **API keys never go in `.env`.** Anything in `.env` ends up in the app bundle. Locally, the Anthropic and Pixabay keys live in `functions/.secret.local`. In production, they're Firebase secrets:
 >
@@ -264,11 +273,22 @@ npx firebase-tools deploy --only functions,firestore
 
 Deploying runs the functions' lint and build steps first. The rules in `firestore.rules` must be deployed for the protections described under [Security](#security) to apply, and `firestore.indexes.json` holds the index the profile's Recent takes query needs. A brand-new function can take a minute or two after its first deploy before the app is allowed to call it.
 
+### Development build
+
+Expo Go can't run native modules that aren't bundled with it, and Google sign-in is one. To test it, install a development build: a custom version of Expo Go with Pique's native code, built once on EAS.
+
+```bash
+cd pique
+npx eas-cli@latest build --profile development --platform android
+```
+
+Install the APK from the link or QR code it ends with. Then run `npx expo start` as usual and open the project in the installed **Pique** dev app instead of Expo Go; JavaScript changes still reload instantly. Rebuild only when native dependencies change. Everything except Google sign-in also still works in Expo Go.
+
 ### Building the APK
 
 The installable Android app is built in the cloud with [EAS Build](https://docs.expo.dev/build/introduction/), using the `preview` profile in `eas.json`. That profile produces an APK, runs on Node 24.12 and reads the environment named "preview".
 
-`.env` is git-ignored, so EAS never receives it. Add the six `EXPO_PUBLIC_FIREBASE_*` values to the EAS "preview" environment once (on expo.dev, or with `npx eas-cli@latest env:create`). Then build:
+`.env` is git-ignored, so EAS never receives it. Add the six `EXPO_PUBLIC_FIREBASE_*` values, and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` for Google sign-in, to the EAS "preview" environment once (on expo.dev, or with `npx eas-cli@latest env:create`). Then build:
 
 ```bash
 cd pique
@@ -276,6 +296,12 @@ npx eas-cli@latest build --profile preview --platform android
 ```
 
 The build takes about 15–20 minutes and ends with a download link and QR code. Release builds always use the live Firebase project, never the emulators.
+
+Expo deletes build files after about 30 days, so publish each APK as a GitHub release too. Name the file `pique.apk`, so the download link and QR code in [Try it on Android](#try-it-on-android) always serve the newest one:
+
+```bash
+gh release create v1.2.0 pique.apk --title "Pique 1.2.0 (Android APK)" --notes "What changed"
+```
 
 ---
 
@@ -307,7 +333,7 @@ pique/
 │   ├── cards/CardComponent.tsx   # Perspective and Recall cards, response gate, timing, feedback
 │   ├── feed/                     # SessionComplete (Frank's verdict), DoneForToday (daily limit)
 │   ├── onboarding/               # AccountCreated, QuestionScreen (shared question layout)
-│   └── ui/                       # Button, TextField, LevelProgress, BadgeGrid, Avatar, SplashAnimation…
+│   └── ui/                       # Button, GoogleButton, TextField, LevelProgress, BadgeGrid, Avatar, SplashAnimation…
 ├── hooks/
 │   ├── useAuth.tsx               # Auth context and live user profile
 │   ├── useCards.tsx              # Session queue, generation, recording, scoring and Frank's replies
@@ -320,6 +346,7 @@ pique/
 │   └── useReminderPrefs.tsx      # Reminder preference, stored on the device
 ├── lib/
 │   ├── firebase.ts               # Firebase app, auth (persisted), Firestore, Functions, emulators
+│   ├── googleSignIn.ts           # Google account picker (Android builds only, never Expo Go)
 │   ├── claude.ts                 # Typed wrappers for the Cloud Functions
 │   ├── onboarding.ts             # Onboarding options, steps and routes
 │   ├── topics.ts                 # Saving topics; the three-session unlock
@@ -345,7 +372,8 @@ pique/
 ├── firestore.rules               # Security Rules
 ├── firestore.indexes.json        # Composite index for Recent takes
 ├── firebase.json                 # Functions, rules, indexes and emulator configuration
-├── eas.json                      # EAS Build profiles (preview APK)
+├── eas.json                      # EAS Build profiles (development client, preview APK)
+├── google-services.json          # Firebase Android config, needed for Google sign-in
 └── .env                          # Firebase web config (git-ignored)
 ```
 

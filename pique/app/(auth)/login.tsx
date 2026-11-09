@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
+import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { OrDivider } from '@/components/ui/OrDivider';
 import { TextField } from '@/components/ui/TextField';
 import { useAuthStyles } from '@/components/ui/authStyles';
 import { Theme } from '@/constants/theme';
@@ -80,11 +82,9 @@ export default function LoginScreen() {
 
       <Button title="Sign in" onPress={handleSignIn} loading={submitting} />
 
-      <View style={styles.divider} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or</Text>
-        <View style={styles.dividerLine} />
-      </View>
+      <OrDivider />
+
+      <GoogleSignInButton onError={setError} disabled={submitting} />
 
       <Button
         title="Create account"
@@ -108,21 +108,6 @@ const useStyles = makeStyles((c) => ({
   },
   forgotText: {
     color: c.accentText,
-    fontFamily: Theme.fontFamily.regular,
-    fontSize: Theme.fontSize.sm,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Theme.spacing.sm + Theme.spacing.xs,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: c.border,
-  },
-  dividerText: {
-    color: c.textSecondary,
     fontFamily: Theme.fontFamily.regular,
     fontSize: Theme.fontSize.sm,
   },

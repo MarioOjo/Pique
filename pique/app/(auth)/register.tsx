@@ -4,7 +4,10 @@ import { Link } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { FormScreen } from '@/components/ui/FormScreen';
+import { GoogleSignInButton } from '@/components/ui/GoogleSignInButton';
 import { LogoMark } from '@/components/ui/LogoMark';
+import { OrDivider } from '@/components/ui/OrDivider';
+import { googleSignInAvailable } from '@/lib/googleSignIn';
 import { TextField } from '@/components/ui/TextField';
 import { useAuthStyles } from '@/components/ui/authStyles';
 import { Theme } from '@/constants/theme';
@@ -105,6 +108,9 @@ export default function RegisterScreen() {
       <ErrorMessage message={error} />
 
       <Button title="Create account" onPress={handleSignUp} loading={submitting} />
+
+      {googleSignInAvailable && <OrDivider />}
+      <GoogleSignInButton onError={setError} disabled={submitting} />
 
       <Text style={styles.notice}>
         By creating an account, you agree that Pique stores your answers and sends them to
