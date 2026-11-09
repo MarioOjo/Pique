@@ -11,6 +11,7 @@
     },
     "android": {
       "package": "com.marioojo.pique",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#1C1040",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -33,7 +34,8 @@
           "backgroundColor": "#1C1040"
         }
       ],
-      "expo-status-bar"
+      "expo-status-bar",
+      "@react-native-google-signin/google-signin"
     ],
     "scheme": "pique",
     "extra": {

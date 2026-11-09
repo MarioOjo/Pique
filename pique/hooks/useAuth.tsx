@@ -2,12 +2,15 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  signInWithCredential,
+  GoogleAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
 import {
   doc,
+  getDoc,
   onSnapshot,
   setDoc,
   serverTimestamp,
@@ -15,6 +18,7 @@ import {
   type DocumentSnapshot,
 } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { pickGoogleAccount, signOutOfGoogle } from '@/lib/googleSignIn';
 import { isAgeBand, isFrankStyle, isSessionSize, isWhyHere } from '@/lib/onboarding';
 import type { User as PiqueUser } from '@/types';
 
@@ -24,7 +28,24 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
+  // Resolves false if the user closed Google's account picker.
+  signInWithGoogle: () => Promise<boolean>;
   signOut: () => Promise<void>;
+}
+
+const MAX_NAME_LENGTH = 50;
+
+// A new profile, as the Security Rules require it to start.
+function newProfile(name: string, email: string) {
+  return {
+    name: name.trim().slice(0, MAX_NAME_LENGTH),
+    email,
+    role: 'standard',
+    frankIntroSeen: false,
+    onboardingComplete: false,
+    dailyCardCount: 0,
+    createdAt: serverTimestamp(),
+  };
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -91,19 +112,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (name: string, email: string, password: string) => {
     const { user: newUser } = await createUserWithEmailAndPassword(auth, email.trim(), password);
-    await setDoc(doc(db, 'users', newUser.uid), {
-      name: name.trim(),
-      email: newUser.email ?? email.trim(),
-      role: 'standard',
-      frankIntroSeen: false,
-      onboardingComplete: false,
-      dailyCardCount: 0,
-      createdAt: serverTimestamp(),
-    });
+    await setDoc(
+      doc(db, 'users', newUser.uid),
+      newProfile(name, newUser.email ?? email.trim()),
+    );
+  };
+
+  // Signs in, or signs up on first use: a Google account with no Pique
+  // profile yet gets one, and then goes through the intro and onboarding
+  // like anyone who registered.
+  const signInWithGoogle = async () => {
+    const account = await pickGoogleAccount();
+    if (!account) return false;
+    const credential = GoogleAuthProvider.credential(account.idToken);
+    const { user: googleUser } = await signInWithCredential(auth, credential);
+    const ref = doc(db, 'users', googleUser.uid);
+    const existing = await getDoc(ref);
+    if (!existing.exists()) {
+      const email = googleUser.email ?? account.email;
+      const name = googleUser.displayName || account.name || email.split('@')[0];
+      await setDoc(ref, newProfile(name, email));
+    }
+    return true;
   };
 
   const signOut = async () => {
     await firebaseSignOut(auth);
+    await signOutOfGoogle();
   };
 
   return (
@@ -114,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading: authLoading || profileLoading,
         signIn,
         signUp,
+        signInWithGoogle,
         signOut,
       }}
     >

@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "104827258280",
+    "project_id": "pique-96fd6",
+    "storage_bucket": "pique-96fd6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104827258280:android:9277ee73f266c0b6df899d",
+        "android_client_info": {
+          "package_name": "com.marioojo.pique"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "104827258280-jp0u91jc387n7k0bmio7qs3gsajhrij6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2r67l1XpET8RvYIcinA0pULY-0bmzsOM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "104827258280-jp0u91jc387n7k0bmio7qs3gsajhrij6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:104827258280:android:20ec7c080403cd59df899d",
+        "android_client_info": {
+          "package_name": "com.pique.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "104827258280-jp0u91jc387n7k0bmio7qs3gsajhrij6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2r67l1XpET8RvYIcinA0pULY-0bmzsOM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "104827258280-jp0u91jc387n7k0bmio7qs3gsajhrij6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
