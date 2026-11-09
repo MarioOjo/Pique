@@ -75,7 +75,7 @@ Frank is built on Anthropic's Claude. He isn't trying to keep you on the app as 
 - **Response scoring.** Every response is scored 1–10 for genuine engagement, with the reason recorded. Agree/Disagree answers are scored in the background; written answers are scored at Submit, so Frank can reply.
 - **Answer checks.** Keyboard mashing gets a gentle nudge before it's sent. Written answers that don't address the question are called out ("Frank's not sure that answers it"), with a chance to try again, and count towards nothing. Answers faster than the card can be read score low, and three in a row bring a "slow down" nudge.
 - **Adaptive feed.** Engagement scores raise or lower each topic's weight, which decides what Frank writes next.
-- **Daily limit.** Up to 30 generated cards a day per user. When they run out, a "done for today" page counts down to fresh cards.
+- **Daily limit.** Up to 30 generated cards a day per user (300 on the local emulators, so testing doesn't run out). When they run out, a "done for today" page counts down to fresh cards.
 - **Graceful fallback.** If Frank is unavailable, the session carries on with clearly labelled sample cards.
 - **Micro-feedback.** Choices spring when pressed, the Submit button pulses, the card border flashes violet, the counterpoint slides in and Frank's acknowledgement follows. Skipping shows "Skipped — Frank noticed."
 - **Frank's verdict.** Each session ends with cards completed, topics explored and your best streak, then Frank's scores arriving live: points earned, a tile per answer and your best take with Frank's reason. Level-ups and new badges are announced here.
@@ -363,6 +363,7 @@ pique/
 │   └── src/
 │       ├── index.ts              # generateCards, scoreResponse, updateStats, deleteAccount
 │       ├── config.ts             # Model, token limits, batch size, daily limit, API key secret
+│       ├── types.ts              # Card types, and each function's request and result
 │       ├── anthropicClient.ts    # Shared, lazily created Claude client
 │       ├── generators/cardGenerator.ts   # Frank's card-writing prompt, personalisation, schema
 │       ├── images/cardImages.ts  # Pixabay search, copy into Storage, credit and alt text
@@ -388,7 +389,7 @@ All of Frank's work happens in Firebase Cloud Functions. The app calls them as c
 **Input:** `{ userId, interestId, count }`, where `count` is 1–5.
 
 1. **Validates the request.** `interestId` must be one of the thirteen topics and `count` must be within the batch size.
-2. **Reserves daily quota in a transaction.** Each user can generate up to 30 cards per day, so concurrent calls can't exceed the limit. The counter resets each UTC day. The same transaction reads the user's onboarding answers.
+2. **Reserves daily quota in a transaction.** Each user can generate up to 30 cards per day (300 when running on the emulators), so concurrent calls can't exceed the limit. The counter resets each UTC day. The same transaction reads the user's onboarding answers.
 3. **Personalises Frank's prompt.** The age band, why the user is here and how hard Frank should push back each add one line to an "About this user" block, and the push-back level nudges card difficulty. Every line comes from a fixed table on the server (`toUserProfile`), never from the user's stored text, so an answer can't inject instructions; unknown values are dropped.
 4. **Calls Claude** (`claude-opus-5-5`, effort `low` for speed) with Frank's system prompt and **structured outputs.** A Zod schema forces the reply into an exact JSON shape: `type`, `body`, `prompt`, `counterpoint` (perspective cards only), `difficulty` (1–5) and `imageQuery`. The SDK then checks the result against the schema. Frank is told to write at about a 14-year-old's reading level, keep the body to 140 characters, and give perspective cards a yes/no question. If Claude's safety checks decline a request, the API re-runs it on its recommended fallback model (`fallbacks: "default"`).
 5. **Finds a photo for each card.** It searches Pixabay for Frank's `imageQuery` (safe search, landscape), falling back to the topic name, and copies the photo into Cloud Storage, because Pixabay doesn't allow permanent links to its own servers. A card whose photo can't be found is saved without one.
@@ -495,7 +496,7 @@ Firestore Security Rules (`pique/firestore.rules`) treat the app as untrusted. C
 - **Stats are server-only.** Users can read their own `stats/{uid}` document, but only Cloud Functions can write it, so points and badges can't be faked.
 - **The topic list is fixed.** The thirteen interest documents can be created once, with a fixed list of IDs and fields, and never changed.
 - **API keys stay on the server.** The Claude and Pixabay keys are Firebase secrets, available only to the functions that need them, and never shipped in the app.
-- **Card photos are read-only.** Storage rules deny all access from the app; each photo is reached only through the private download link `generateCards` saves on its card.
+- **Card photos are read-only.** Cloud Storage was set up in production mode, whose default rules deny all access from the app; each photo is reached only through the private download link `generateCards` saves on its card. These rules live in the Firebase console, not in this repo (there's no `storage.rules`), so check them there on a new project.
 - **Users can delete their data.** Delete account removes everything stored about the user (see `deleteAccount` above), and the privacy notice on register and in Settings says what's kept and that written answers go to Claude.
 
 These rules were tested against the Firestore emulator, including attempts to self-score, change weights, write cards, read other users' data, edit interactions, store injected text or out-of-range values as onboarding answers, change topics before the unlock, and inflate the session count. Account deletion was tested to remove only the caller's data.
